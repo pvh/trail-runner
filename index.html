@@ -7,7 +7,7 @@
 <!-- either use "defer" or load this polyfill after the scripts below-->
 <html>
   <script async src="./es-module-shims@1.7.3.js"></script>
-  <script type="importmap">
+  <script type="importmap-shim">
     {
       "imports": {
         "@automerge/automerge-repo": "https://ga.jspm.io/npm:@automerge/automerge-repo@0.1.2/dist/index.js",
@@ -23,7 +23,7 @@
           "#node.js": "https://ga.jspm.io/npm:browserslist@4.21.9/browser.js",
           "@ampproject/remapping": "https://ga.jspm.io/npm:@ampproject/remapping@2.2.1/dist/remapping.umd.js",
           "@automerge/automerge": "https://ga.jspm.io/npm:@automerge/automerge@2.1.0-alpha.8/dist/mjs/index.js",
-          "@automerge/automerge-wasm": "https://ga.jspm.io/npm:@automerge/automerge-wasm@0.2.7/bundler/automerge_wasm.js",
+          "@automerge/automerge-wasm": "./web/automerge_wasm.js",
           "@babel/code-frame": "https://ga.jspm.io/npm:@babel/code-frame@7.22.5/lib/index.js",
           "@babel/compat-data/native-modules": "https://ga.jspm.io/npm:@babel/compat-data@7.22.5/native-modules.js",
           "@babel/compat-data/plugins": "https://ga.jspm.io/npm:@babel/compat-data@7.22.5/plugins.js",
@@ -118,28 +118,55 @@
       polyfillEnable: ["css-modules", "json-modules"],
     }
   </script>
-  <script type="module">
+  <script type="module-shim">
     import { Generator } from "@jspm/generator"
     import { ImportMap } from "@jspm/import-map"
-
     import { Repo } from "@automerge/automerge-repo"
 
     const repo = new Repo()
-    console.log("repo loaded", repo)
+    // console.log("repo loaded", repo)
 
-    /* 
-    const generator = new Generator(importShim.getImportMap())
+    /*
+
+    // Total pseudocode here...
+
+    const getDocFromUrl = () => {
+      const url = new URL(window.location.href)
+      const docId = url.searchParams.get("doc")
+      if (docId) {
+        return repo.find(docId)
+      } else {
+        const doc = repo.create()
+        url.searchParams.set("doc", doc.docId)
+        window.history.replaceState({}, "", url.toString())
+        return doc
+      }
+    }
+
+    const doc = getDocFromUrl()
+    */
+
+    const generator = new Generator({importMap: importShim.importMap})
 
     await generator.install("codemirror")
 
     const importMap = generator.getMap()
     console.log("new map", importMap)
     console.log("old map", importShim.getImportMap())
+
     importShim.addImportMap(importMap)
+
+    /* const { bootstrap } = import(doc.bootstrapDoc)
+    bootstrap(repo)
+    // and we're self-hosted from here on out
+    */
+
+
+
     console.log("merged map", importShim.getImportMap())
 
-    console.log(Repo)
-    */
+    const CodeMirror = await import("codemirror")
+    console.log(CodeMirror)
   </script>
   <div>Hello</div>
 </html>
