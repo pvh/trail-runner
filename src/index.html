@@ -1,17 +1,14 @@
-<!doctype html>
+<!DOCTYPE html>
 <!-- either use "defer" or load this polyfill after the scripts below-->
 <html>
   <!--  
   <script async src="https://ga.jspm.io/npm:es-module-shims@1.7.3/dist/es-module-shims.js" crossorigin="anonymous"></script>
   -->
   <script type="importmap-shim">
-  {
-    "imports": {
-      "@jspm/generator": "https://ga.jspm.io/npm:@jspm/generator@1.1.9/dist/generator.js",
-      "@jspm/import-map": "https://ga.jspm.io/npm:@jspm/import-map@1.0.7/dist/map.js"
-    },
-    "scopes": {
-      "https://ga.jspm.io/": {
+    {
+      "imports": {
+        "@jspm/generator": "./generator.js",
+        "@jspm/import-map": "https://ga.jspm.io/npm:@jspm/import-map@1.0.7/dist/map.js",
         "#fetch": "https://ga.jspm.io/npm:@jspm/generator@1.1.9/dist/fetch-native.js",
         "#lib/config/files/index.js": "https://ga.jspm.io/npm:@babel/core@7.22.5/lib/config/files/index-browser.js",
         "#lib/config/resolve-targets.js": "https://ga.jspm.io/npm:@babel/core@7.22.5/lib/config/resolve-targets-browser.js",
@@ -90,35 +87,50 @@
         "to-fast-properties": "https://ga.jspm.io/npm:to-fast-properties@2.0.0/index.js",
         "url": "https://ga.jspm.io/npm:@jspm/core@2.0.1/nodelibs/browser/url.js",
         "yallist": "https://ga.jspm.io/npm:yallist@3.1.1/yallist.js"
+      },
+      "scopes": {
+        "https://ga.jspm.io/": {
+
+        }
       }
     }
-  }
   </script>
   <script>
     window.esmsInitOptions = {
       shimMode: true,
       mapOverrides: true,
-      polyfillEnable: ['css-modules', 'json-modules'],
+      polyfillEnable: ["css-modules", "json-modules"],
     }
-    </script>
+  </script>
   <script src="es-module-shims@1.7.3.js"></script>
   <script type="module-shim">
     import { Generator } from "@jspm/generator";
     import { ImportMap } from "@jspm/import-map";
-    const generator = new Generator()
-    
+    const generator = new Generator(importShim.getImportMap())
+
     await generator.install("codemirror")
+    // await generator.install("automerge-repo")
+    await generator.install("@ffmpeg/ffmpeg")
+    await generator.install("@ffmpeg/core")
 
     const importMap = generator.getMap()
     console.log("new map", importMap)
     console.log("old map", importShim.getImportMap())
     importShim.addImportMap(importMap)
     console.log("merged map", importShim.getImportMap())
-    
-    const CodeMirror = await import("codemirror")
-    console.log(CodeMirror)
+
+    // const { Repo } = await import("automerge-repo")
+    const module = await import("@ffmpeg/ffmpeg");
+    console.log(module)
+    const { createFFmpeg, fetchFile } = module
+
+    console.log("createFFmpeg", createFFmpeg, fetchFile)
+    const ffmpeg = createFFmpeg({ log: true })
+
+    ;(async () => {
+      await ffmpeg.load();
+      console.log("loaded", ffmpeg)
+    })();
   </script>
-  <div>
-    Hello
-  </div>
+  <div>Hello</div>
 </html>
