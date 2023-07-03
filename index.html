@@ -136,22 +136,18 @@
           const documentId = url.slice(prefix.length)
           const handle = repo.find(documentId)
           const value = await handle.value()
-          const source = value.text
+          const source = value.text || value.source // TODO: where to put source?
           return new Response(new Blob([source], { type: "application/javascript", url }))
         }
         const res = await fetch(url, options)
-        if (!res.ok) return res
-        if (res.url.endsWith(".ts")) {
-          const source = await res.body()
-          const transformed = tsCompile(source)
-          return new Response(new Blob([transformed], { type: "application/javascript" }))
-        }
         return res
       },
     }
     window.process = { env: {}, versions: {} }
   </script>
   <script type="module-shim" src="./index.js"></script>
-  <script type="module-shim" src="./app.js"></script>
+  <script type="module-shim">
+    const app = import("https://faux-automerge.com/3cd7c303-1c97-4552-a099-f43d151b6534")
+  </script>
   <div>Hang on a moment...</div>
 </html>
