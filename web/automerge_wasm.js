@@ -2113,12 +2113,10 @@ async function initSync(module) {
 
   __wbg_init_memory(imports)
 
-  console.log("1", module)
   if (!(module instanceof WebAssembly.Module)) {
     module = new WebAssembly.Module(module)
   }
 
-  console.log("2", module)
   const instance = await WebAssembly.instantiate(module, imports)
 
   return __wbg_finalize_init(instance, module)
