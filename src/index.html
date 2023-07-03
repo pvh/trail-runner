@@ -156,6 +156,10 @@
     })
     console.log("repo loaded", repo)
 
+    const handle = repo.find("043862bd-12e1-4b22-87d2-fc9fc7fe4ed1")
+    const value = await handle.value()
+
+    console.log("holy crap", value)
     /*
 
     // Total pseudocode here...
