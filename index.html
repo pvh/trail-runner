@@ -12,7 +12,7 @@
     src="https://ga.jspm.io/npm:es-module-shims@1.7.3/dist/es-module-shims.js"
     crossorigin="anonymous"
   ></script>
-  <script type="importmap">
+  <script type="importmap-shim">
     {
       "imports": {
         "@automerge/automerge-repo": "https://ga.jspm.io/npm:@automerge/automerge-repo@0.1.2/dist/index.js",
@@ -20,7 +20,6 @@
         "@automerge/automerge-repo-storage-localforage": "./localforageadapter.js",
         "@jspm/generator": "https://ga.jspm.io/npm:@jspm/generator@1.1.9/dist/generator.js",
         "@jspm/import-map": "https://ga.jspm.io/npm:@jspm/import-map@1.0.7/dist/map.js",
-        "codemirror": "https://ga.jspm.io/npm:codemirror@6.0.1/dist/index.js",
         "localforage": "https://ga.jspm.io/npm:localforage@1.10.0/dist/localforage.js"
       },
       "scopes": {
@@ -141,7 +140,7 @@
     }
     window.process = { env: {}, versions: {} }
   </script>
-  <script type="module">
+  <script type="module-shim">
     import { Generator } from "@jspm/generator"
     import { ImportMap } from "@jspm/import-map"
 
@@ -159,11 +158,9 @@
     const handle = repo.find("043862bd-12e1-4b22-87d2-fc9fc7fe4ed1")
     const value = await handle.value()
 
-    console.log("holy crap", value)
     /*
 
     // Total pseudocode here...
-
     const getDocFromUrl = () => {
       const url = new URL(window.location.href)
       const docId = url.searchParams.get("doc")
@@ -176,19 +173,31 @@
         return doc
       }
     }
-
     const doc = getDocFromUrl()
     */
 
-    const generator = new Generator({ importMap: importShim.importMap })
+    if (!value.importMap || Object.keys(value.importMap).length === 0) {
+      console.log("Creating importMap")
+      const generator = new Generator({})
+      await generator.install("codemirror")
+      handle.change((d) => {
+        d.importMap = generator.getMap()
+      })
+    } else {
+      console.log("ImportMap already exists", value.importMap)
+    }
 
-    await generator.install("codemirror")
+    try {
+      const CM = await import("code" + "mirror")
+      console.log("should not have, but managed to import", CM)
+    } catch (e) {
+      console.log("We should error importing CM", e)
+    }
 
-    const importMap = generator.getMap()
-    console.log("new map", importMap)
-    console.log("old map", importShim.getImportMap())
-
-    importShim.addImportMap(importMap)
+    console.log("Document importMap", value.importMap)
+    importShim.addImportMap(value.importMap)
+    const CM = await import("code" + "mirror")
+    console.log(CM)
 
     /* const { bootstrap } = import(doc.bootstrapDoc)
     bootstrap(repo)
@@ -196,9 +205,6 @@
     */
 
     console.log("merged map", importShim.getImportMap())
-
-    const CodeMirror = await import("codemirror")
-    console.log(CodeMirror)
   </script>
   <div>Hello</div>
 </html>
