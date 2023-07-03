@@ -7,11 +7,6 @@
 <!-- either use "defer" or load this polyfill after the scripts below-->
 <html>
   <script async src="./es-module-shims@1.7.3.js"></script>
-  <script
-    async
-    src="https://ga.jspm.io/npm:es-module-shims@1.7.3/dist/es-module-shims.js"
-    crossorigin="anonymous"
-  ></script>
   <script type="importmap-shim">
     {
       "imports": {
@@ -137,6 +132,24 @@
       shimMode: true,
       mapOverrides: true,
       polyfillEnable: ["css-modules", "json-modules"],
+      fetch: async function (url, options) {
+        const prefix = "https://faux-automerge.com/"
+        if (url.startsWith(prefix)) {
+          const documentId = url.slice(prefix.length)
+          const handle = repo.find(documentId)
+          const value = await handle.value()
+          const source = value.text
+          return new Response(new Blob([source], { type: "application/javascript", url }))
+        }
+        const res = await fetch(url, options)
+        if (!res.ok) return res
+        if (res.url.endsWith(".ts")) {
+          const source = await res.body()
+          const transformed = tsCompile(source)
+          return new Response(new Blob([transformed], { type: "application/javascript" }))
+        }
+        return res
+      },
     }
     window.process = { env: {}, versions: {} }
   </script>
@@ -153,6 +166,7 @@
       storage: new LocalForageStorageAdapter(),
       network: [new BrowserWebSocketClientAdapter(url)],
     })
+    window.repo = repo
     console.log("repo loaded", repo)
 
     const handle = repo.find("043862bd-12e1-4b22-87d2-fc9fc7fe4ed1")
@@ -160,31 +174,79 @@
 
     /*
 
-    // Total pseudocode here...
-    const getDocFromUrl = () => {
-      const url = new URL(window.location.href)
-      const docId = url.searchParams.get("doc")
-      if (docId) {
-        return repo.find(docId)
-      } else {
-        const doc = repo.create()
-        url.searchParams.set("doc", doc.docId)
-        window.history.replaceState({}, "", url.toString())
-        return doc
+      // Total pseudocode here...
+      const getDocFromUrl = () => {
+        const url = new URL(window.location.href)
+        const docId = url.searchParams.get("doc")
+        if (docId) {
+          return repo.find(docId)
+        } else {
+          const doc = repo.create()
+          url.searchParams.set("doc", doc.docId)
+          window.history.replaceState({}, "", url.toString())
+          return doc
+        }
       }
-    }
-    const doc = getDocFromUrl()
-    */
+      const doc = getDocFromUrl()
+      */
 
-    if (!value.importMap || Object.keys(value.importMap).length === 0) {
-      console.log("Creating importMap")
-      const generator = new Generator({})
+    // had trouble using a more protocol-ey prefix, so this is a hack
+    const automergePrefix = "https://faux-automerge.com/"
+
+    if (!value.importMap) {
+      console.log("Creating new importMap from", value.importMap)
+      const generator = new Generator({ importMap: value.importMap, env: ["production", "browser", "module"] })
       await generator.install("codemirror")
+      await generator.install("react")
+      await generator.install("react-dom/client")
+
+      const map = generator.getMap()
+
+      for (const [key, value] of Object.entries(map.imports)) {
+        if (value.startsWith(automergePrefix)) {
+          console.log("Skipping automerge import", key, value)
+        }
+        if (value.startsWith("https://ga.jspm.io/npm:")) {
+          const code = await (await fetch(value)).text()
+          const textHandle = repo.create()
+          textHandle.change((d) => {
+            d.text = code
+          })
+
+          map.imports[key] = automergePrefix + textHandle.documentId
+          console.log("Replaced import", key, value, "with", map.imports[key])
+        }
+      }
+
+      if (!map.scopes[automergePrefix]) {
+        map.scopes[automergePrefix] = {}
+      }
+      const defaultScope = "https://ga.jspm.io/"
+      for (const [key, value] of Object.entries(map.scopes[defaultScope])) {
+        if (value.startsWith(automergePrefix)) {
+          console.log("Skipping automerge import", key, value)
+        }
+        if (value.startsWith("https://ga.jspm.io/npm:")) {
+          const code = await (await fetch(value)).text()
+          const textHandle = repo.create()
+          textHandle.change((d) => {
+            d.text = code
+          })
+
+          map.scopes[automergePrefix][key] = automergePrefix + textHandle.documentId
+          console.log("Replaced import", key, value, "with", map.scopes[automergePrefix][key])
+        }
+      }
+      delete map.scopes[defaultScope]
+
+      console.log("after rewrite", map)
+
       handle.change((d) => {
-        d.importMap = generator.getMap()
+        console.log("Result", map)
+        d.importMap = map
       })
     } else {
-      console.log("ImportMap already exists", value.importMap)
+      console.log("found ", value.importMap)
     }
 
     try {
@@ -194,17 +256,21 @@
       console.log("We should error importing CM", e)
     }
 
-    console.log("Document importMap", value.importMap)
-    importShim.addImportMap(value.importMap)
-    const CM = await import("code" + "mirror")
+    console.log("Document importMap", handle.doc.importMap)
+    importShim.addImportMap(handle.doc.importMap)
+    const CM = await import("codemirror")
     console.log(CM)
 
-    /* const { bootstrap } = import(doc.bootstrapDoc)
-    bootstrap(repo)
-    // and we're self-hosted from here on out
-    */
+    const React = await import('react');
+    const client = await import('react-dom/client');
+    const { createRoot } = client
 
-    console.log("merged map", importShim.getImportMap())
+    // Clear the existing HTML content
+    document.body.innerHTML = '<div id="app"></div>';
+
+    // Render your React component instead
+    const root = createRoot(document.getElementById('app'));
+    root.render(React.createElement("h1", {}, "Here's React, hosted out of an automerge-repo!"));
   </script>
-  <div>Hello</div>
+  <div>Hang on a moment...</div>
 </html>
