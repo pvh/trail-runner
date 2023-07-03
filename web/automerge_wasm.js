@@ -2106,7 +2106,7 @@ function __wbg_finalize_init(instance, module) {
   return wasm
 }
 
-function initSync(module) {
+async function initSync(module) {
   if (wasm !== undefined) return wasm
 
   const imports = __wbg_get_imports()
@@ -2119,7 +2119,7 @@ function initSync(module) {
   }
 
   console.log("2", module)
-  const instance = WebAssembly.instantiate(module, imports)
+  const instance = await WebAssembly.instantiate(module, imports)
 
   return __wbg_finalize_init(instance, module)
 }

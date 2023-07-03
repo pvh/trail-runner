@@ -4,6 +4,6 @@
 const WASM = await WebAssembly.compileStreaming(fetch("./web/automerge_wasm_bg.wasm"))
 console.log("loaded the wasm")
 import { initSync } from "./automerge_wasm.js"
-initSync(WASM)
+await initSync(WASM)
 console.log("managed to intialize the wasm")
 export * from "./automerge_wasm.js"
