@@ -7,10 +7,16 @@
 <!-- either use "defer" or load this polyfill after the scripts below-->
 <html>
   <script async src="./es-module-shims@1.7.3.js"></script>
+  <script
+    async
+    src="https://ga.jspm.io/npm:es-module-shims@1.7.3/dist/es-module-shims.js"
+    crossorigin="anonymous"
+  ></script>
   <script type="importmap">
     {
       "imports": {
         "@automerge/automerge-repo": "https://ga.jspm.io/npm:@automerge/automerge-repo@0.1.2/dist/index.js",
+        "@automerge/automerge-repo-network-websocket": "https://ga.jspm.io/npm:@automerge/automerge-repo-network-websocket@0.1.2/dist/index.js",
         "@automerge/automerge-repo-storage-localforage": "https://ga.jspm.io/npm:@automerge/automerge-repo-storage-localforage@0.1.2/dist/index.js",
         "@jspm/generator": "https://ga.jspm.io/npm:@jspm/generator@1.1.9/dist/generator.js",
         "@jspm/import-map": "https://ga.jspm.io/npm:@jspm/import-map@1.0.7/dist/map.js",
@@ -25,7 +31,7 @@
           "#node.js": "https://ga.jspm.io/npm:browserslist@4.21.9/browser.js",
           "@ampproject/remapping": "https://ga.jspm.io/npm:@ampproject/remapping@2.2.1/dist/remapping.umd.js",
           "@automerge/automerge": "https://ga.jspm.io/npm:@automerge/automerge@2.1.0-alpha.8/dist/mjs/index.js",
-          "@automerge/automerge-wasm": "https://ga.jspm.io/npm:@automerge/automerge-wasm@0.2.7/bundler/automerge_wasm.js",
+          "@automerge/automerge-wasm": "./web/index.js",
           "@babel/code-frame": "https://ga.jspm.io/npm:@babel/code-frame@7.22.5/lib/index.js",
           "@babel/compat-data/native-modules": "https://ga.jspm.io/npm:@babel/compat-data@7.22.5/native-modules.js",
           "@babel/compat-data/plugins": "https://ga.jspm.io/npm:@babel/compat-data@7.22.5/plugins.js",
@@ -95,6 +101,7 @@
           "fs": "https://ga.jspm.io/npm:@jspm/core@2.0.1/nodelibs/browser/fs.js",
           "gensync": "https://ga.jspm.io/npm:gensync@1.0.0-beta.2/index.js",
           "globals": "https://ga.jspm.io/npm:globals@11.12.0/index.js",
+          "isomorphic-ws": "https://ga.jspm.io/npm:isomorphic-ws@5.0.0/browser.js",
           "js-tokens": "https://ga.jspm.io/npm:js-tokens@4.0.0/index.js",
           "jsesc": "https://ga.jspm.io/npm:jsesc@2.5.2/jsesc.js",
           "localforage": "https://ga.jspm.io/npm:localforage@1.10.0/dist/localforage.js",
@@ -140,9 +147,12 @@
 
     import { Repo } from "@automerge/automerge-repo"
     import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
+    import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 
+    const url = "wss://sync.inkandswitch.com"
     const repo = new Repo({
       storage: new LocalForageStorageAdapter(),
+      network: [new BrowserWebSocketClientAdapter(url)],
     })
     console.log("repo loaded", repo)
 
