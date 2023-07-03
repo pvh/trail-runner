@@ -10,9 +10,7 @@
   "license": "MIT",
   "devDependencies": {
     "jspm": "^3.0.1",
-    "prettier": "^2.8.8"
-  },
-  "dependencies": {
+    "prettier": "^2.8.8",
     "serve": "^14.2.0"
   }
 }
