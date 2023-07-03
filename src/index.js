@@ -1,5 +1,4 @@
 import { Generator } from "@jspm/generator"
-import { ImportMap } from "@jspm/import-map"
 
 import { Repo } from "@automerge/automerge-repo"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
@@ -14,7 +13,8 @@ window.repo = repo // put it on the window to reach it from the fetch command el
 console.log("repo loaded", repo)
 
 // Step two: load a document from the repo.
-const handle = repo.find("043862bd-12e1-4b22-87d2-fc9fc7fe4ed1")
+//const handle = repo.find("043862bd-12e1-4b22-87d2-fc9fc7fe4ed1")
+const handle = repo.find("3cd7c303-1c97-4552-a099-f43d151b6534")
 const value = await handle.value()
 console.log("document loaded")
 
