@@ -130,10 +130,11 @@
       fetch: async function (url, options) {
         const prefix = "https://faux-automerge.com/"
         if (url.startsWith(prefix)) {
-          const documentId = url.slice(prefix.length)
+          const documentId = url.slice(prefix.length, prefix.length + 36)
           const handle = repo.find(documentId)
           const value = await handle.value()
-          const source = value.text || value.source // TODO: where to put source?
+          const source = value.source
+
           return new Response(new Blob([source], { type: "application/javascript", url }))
         }
         const res = await fetch(url, options)
@@ -143,8 +144,8 @@
     window.process = { env: {}, versions: {} }
   </script>
   <script type="module-shim" src="./index.js"></script>
-  <script type="module-shim">
+  <!--<script type="module-shim">
     const app = import("https://faux-automerge.com/3cd7c303-1c97-4552-a099-f43d151b6534")
-  </script>
+  </script>-->
   <div>Hang on a moment...</div>
 </html>
