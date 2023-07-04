@@ -14,12 +14,83 @@ console.log("repo loaded", repo)
 
 // Step two: load a document from the repo.
 //const handle = repo.find("043862bd-12e1-4b22-87d2-fc9fc7fe4ed1")
-const handle = repo.find("3cd7c303-1c97-4552-a099-f43d151b6534")
-const value = await handle.value()
-console.log("document loaded")
+const rootHandle = repo.find("3cd7c303-1c97-4552-a099-f43d151b6534")
+const rootDoc = await rootHandle.value()
+console.log("document loaded", JSON.parse(JSON.stringify(rootDoc.contentTypes)))
 
-// (I had trouble using a more protocol-ey prefix, so this is a hack for now.)
 const automergePrefix = "https://faux-automerge.com/"
+
+const currentUrl = new URL(window.location.href)
+const documentId = currentUrl.searchParams.get("documentId")
+const viewType = currentUrl.searchParams.get("view")
+
+console.log({ viewType, documentId })
+
+const generator = new Generator({
+  // currently we need production mode so all dependencies get bundled into a single esm module
+  // todo: fix that modules with sub imports can also be loaded
+  env: ["production", "browser", "module"],
+})
+
+for (const contentTypeId of rootDoc.contentTypes) {
+  console.log("link", contentTypeId)
+
+  const contentTypeDoc = await repo.find(contentTypeId).value()
+
+  for (const [name, version] of Object.entries(contentTypeDoc.dependencies)) {
+    console.log("install", name, version)
+    await generator.install(`${name}@${version}`)
+  }
+}
+
+const importMap = generator.getMap()
+
+importShim.addImportMap(importMap)
+
+// bootstrap logic
+// todo: extract
+
+const CONTENT_TYPES = {}
+
+for (const contentTypeId of rootDoc.contentTypes) {
+  // add random parameter, otherwise we get cached results
+  // this probably should be fixed by setting proper caching headers in the fetch shim
+  const module = await import(`${automergePrefix}${contentTypeId}?rand=${Math.random()}`)
+
+  if (module.contentType) {
+    CONTENT_TYPES[module.contentType.type] = module.contentType
+  }
+}
+
+const { RepoContext } = await import("@automerge/automerge-repo-react-hooks")
+const React = await import("react")
+const { createRoot } = await import("react-dom")
+
+document.body.innerHTML = '<div id="app"></div>'
+
+// Render your React component instead
+const root = createRoot(document.getElementById("app"))
+
+console.log("root", root)
+
+const contentType = CONTENT_TYPES[viewType]
+
+console.log(CONTENT_TYPES)
+
+if (documentId && contentType && contentType.view) {
+  console.log("render", contentType.view)
+
+  root.render(
+    React.createElement(
+      RepoContext.Provider,
+      { value: repo },
+      React.createElement(contentType.view, { documentId })
+    )
+  )
+}
+
+/*
+
 
 // Check the document hash for "shouldRebuild" and if it's there, rebuild the import map.
 const currentUrl = new URL(window.location.href)
@@ -99,3 +170,6 @@ try {
 
 console.log("Now we add the import map found in the automerge doc.")
 importShim.addImportMap(handle.doc.importMap)
+
+
+ */
