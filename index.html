@@ -123,9 +123,10 @@
     }
   </script>
   <script>
-    const {fetch: originalFetch} = window;
+    const { fetch: originalFetch } = window
 
-    const REPO_PATH_REGEX = /^\/repo\/([a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12})(\/([^/]+))?$/
+    const REPO_PATH_REGEX =
+      /^.+\/repo\/([a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12})(\/([^/]+))?$/
 
     // we have to intercept the global fetch because the fetch hook in the esm shim only intercepts imports
     // the install in the generator uses fetch directly
@@ -135,49 +136,49 @@
 
       // intercept requests to /repo/$documentId
       if (parsedUrl && parsedUrl.origin === origin) {
-
-
         const match = parsedUrl.pathname.match(REPO_PATH_REGEX)
 
         if (match) {
           const documentId = match[1]
           const fileName = match[3]
-          const doc = await (repo.find(documentId).value())
+          const doc = await repo.find(documentId).value()
 
           switch (fileName) {
-            case 'package.json': {
-              const packageJson = JSON.stringify({dependencies: doc.dependencies ?? {}})
+            case "package.json": {
+              const packageJson = JSON.stringify({ dependencies: doc.dependencies ?? {} })
               return new Response(packageJson, {
                 headers: {
-                  "Content-Type": "application/json"
-                }
+                  "Content-Type": "application/json",
+                },
               })
             }
-            case 'index.js':
-              return doc.source !== undefined ?
-                new Response(doc.source, {
-                  headers: {
-                    'Content-Type': 'application/javascript'
-                  }
-                }) : new Response('Not Found', {
-                  headers: {
-                    'Content-Type': 'text/plain'
-                  },
-                  status: 404
-                })
+            case "index.js":
+              return doc.source !== undefined
+                ? new Response(doc.source, {
+                    headers: {
+                      "Content-Type": "application/javascript",
+                    },
+                  })
+                : new Response("Not Found", {
+                    headers: {
+                      "Content-Type": "text/plain",
+                    },
+                    status: 404,
+                  })
 
             default:
-              return new Response('Not Found', {
+              return new Response("Not Found", {
                 headers: {
-                  'Content-Type': 'text/plain'
-                }, status: 404
+                  "Content-Type": "text/plain",
+                },
+                status: 404,
               })
           }
         }
       }
 
       return originalFetch(url, options)
-    };
+    }
 
     function parseUrl(url) {
       try {
@@ -192,7 +193,7 @@
       mapOverrides: true,
       polyfillEnable: ["css-modules", "json-modules"],
     }
-    window.process = {env: {}, versions: {}}
+    window.process = { env: {}, versions: {} }
   </script>
   <script type="module-shim" src="./index.js"></script>
   <!--<script type="module-shim">
