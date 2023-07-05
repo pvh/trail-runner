@@ -121,7 +121,6 @@
         }
       }
     }
-
   </script>
   <script>
     const {fetch: originalFetch} = window;
@@ -141,8 +140,6 @@
         const match = parsedUrl.pathname.match(REPO_PATH_REGEX)
 
         if (match) {
-          console.log(url)
-
           const documentId = match[1]
           const fileName = match[3]
           const doc = await (repo.find(documentId).value())
@@ -158,7 +155,7 @@
             }
             case 'index.js':
               return doc.source !== undefined ?
-                new Response(new Blob([doc.source]), {
+                new Response(doc.source, {
                   headers: {
                     'Content-Type': 'application/javascript'
                   }
@@ -194,19 +191,6 @@
       shimMode: true,
       mapOverrides: true,
       polyfillEnable: ["css-modules", "json-modules"],
-      fetch: async function (url, options) {
-        const prefix = "https://faux-automerge.com/"
-        if (url.startsWith(prefix)) {
-          const documentId = url.slice(prefix.length, prefix.length + 36)
-          const handle = repo.find(documentId)
-          const value = await handle.value()
-          const source = value.source
-
-          return new Response(new Blob([source], {type: "application/javascript", url}))
-        }
-        const res = await fetch(url, options)
-        return res
-      },
     }
     window.process = {env: {}, versions: {}}
   </script>
