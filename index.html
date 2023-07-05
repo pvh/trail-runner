@@ -121,6 +121,7 @@
         }
       }
     }
+
   </script>
   <script>
     const {fetch: originalFetch} = window;
@@ -136,28 +137,27 @@
       // intercept requests to /repo/$documentId
       if (parsedUrl && parsedUrl.origin === origin) {
 
+
         const match = parsedUrl.pathname.match(REPO_PATH_REGEX)
 
         if (match) {
+          console.log(url)
+
           const documentId = match[1]
           const fileName = match[3]
           const doc = await (repo.find(documentId).value())
 
           switch (fileName) {
-            case 'package.json':
-              return doc.dependencies ?
-                new Response(JSON.stringify({dependencies: doc.dependencies}), {
-                  headers: {
-                    "Content-Type": "application/json"
-                  }
-                }) : new Response('Not Found', {
-                  headers: {
-                    'Content-Type': 'text/plain'
-                  }, status: 404
-                })
-
+            case 'package.json': {
+              const packageJson = JSON.stringify({dependencies: doc.dependencies ?? {}})
+              return new Response(packageJson, {
+                headers: {
+                  "Content-Type": "application/json"
+                }
+              })
+            }
             case 'index.js':
-              return doc.source ?
+              return doc.source !== undefined ?
                 new Response(new Blob([doc.source]), {
                   headers: {
                     'Content-Type': 'application/javascript'
@@ -165,7 +165,8 @@
                 }) : new Response('Not Found', {
                   headers: {
                     'Content-Type': 'text/plain'
-                  }, status: 404
+                  },
+                  status: 404
                 })
 
             default:
