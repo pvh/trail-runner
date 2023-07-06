@@ -2,6 +2,7 @@ import { Generator } from "@jspm/generator"
 import { Repo } from "@automerge/automerge-repo"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
+import * as Automerge from "@automerge/automerge"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
@@ -9,6 +10,7 @@ const repo = new Repo({
   network: [new BrowserWebSocketClientAdapter("wss://sync.inkandswitch.com")],
 })
 window.repo = repo // put it on the window to reach it from the fetch command elsewhere (hack)
+window.Automerge = Automerge // put this on the window too, because the published version doesn't work due to the WASM import situation
 console.log("repo loaded", repo)
 
 const generator = new Generator({
