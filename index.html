@@ -152,9 +152,11 @@
                 },
               })
             }
-            case "index.js":
-              return doc.source !== undefined
-                ? new Response(doc.source, {
+            case "index.js": {
+              // always prefer dist over source (we should stop using source at all)
+              const code = doc.dist ?? doc.source
+              return doc.dist !== undefined || doc.source !== undefined
+                ? new Response(doc.dist || doc.source, {
                     headers: {
                       "Content-Type": "application/javascript",
                     },
@@ -165,7 +167,7 @@
                     },
                     status: 404,
                   })
-
+            }
             default:
               return new Response("Not Found", {
                 headers: {
