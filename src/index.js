@@ -19,7 +19,8 @@ const generator = new Generator({
   env: ["production", "browser", "module"],
 })
 
-const BOOTSTRAP_DOC_ID = (window.BOOTSTRAP_DOC_ID = "e92beafb-147b-44e7-bfd2-abb898279e16")
+const BOOTSTRAP_DOC_ID = (window.BOOTSTRAP_DOC_ID =
+  localStorage.BOOTSTRAP_DOC_ID || "bec0e828-838f-4484-82ad-b2d52bc03f71")
 
 await generator.install(`./repo/${BOOTSTRAP_DOC_ID}`)
 const importMap = generator.getMap()
