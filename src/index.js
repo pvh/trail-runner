@@ -3,6 +3,7 @@ import { Repo } from "@automerge/automerge-repo"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { AutomergeRegistry } from "./automerge-provider.js"
+import { s } from "./generator-b4f53f2d.js"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
@@ -37,8 +38,22 @@ await generator.install("codemirror", "@automerge/automerge")
 const iM = generator.importMap
 const r = generator.traceMap.resolver
 
-const packageBase = await r.getPackageBase(iM.imports["codemirror"])
-console.log(await registry.cachePackage(packageBase, await r.getPackageConfig(packageBase)))
+// First, imports
+Promise.all(
+  Object.values(iM.imports).map(async (packageEntryPoint) => {
+    const packageBase = await r.getPackageBase(packageEntryPoint)
+    await registry.cachePackage(packageBase, await r.getPackageConfig(packageBase))
+  })
+)
+// Next, scopes
+Promise.all(
+  Object.values(iM.scopes).map(async (scope) => {
+    Object.values(scope).map(async (packageEntryPoint) => {
+      const packageBase = await r.getPackageBase(packageEntryPoint)
+      await registry.cachePackage(packageBase, await r.getPackageConfig(packageBase))
+    })
+  })
+)
 
 /* 
 const generator = new Generator({ env: ["production", "browser", "module"] })
