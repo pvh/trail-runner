@@ -7,13 +7,40 @@ export class AutomergeRegistry {
     this.automergeRepo = automergeRepo
     this.myRegistryDocHandle = myRegistryDocHandle
   }
+
+  // could add a force flag to re-cache packages
   async cachePackage(packageBase, config) {
+    const { name, version, files } = config
+    if (!name) throw new Error("no name in package config")
+    if (!version) throw new Error("no version in package config")
+    if (!files) throw new Error("no files in package config")
+
+    const value = await this.myRegistryDocHandle.value()
+    if (value.packages[name] && value.packages[name][version]) {
+      console.log("already have this package", name, version)
+      return
+    }
+
+    console.log("fetching package", name, version)
+    const pkg = await this.fetchPackage(packageBase, config)
+    console.log("fetched package", name, version)
+
+    this.myRegistryDocHandle.change((doc) => {
+      if (!doc.packages[name]) {
+        doc.packages[name] = {}
+      }
+      doc.packages[name][version] = "automerge:" + handle.documentId
+    })
+    console.log("registered package", name, version, handle.documentId)
+  }
+
+  async fetchPackage(packageBase, config) {
+    const { name, version, files } = config
+
     // first, fetch all the file contents: let's not save a partial module
     const fileContents = {}
-    if (!config.files) throw new Error("no files in package config")
-    const files = config.files
     await Promise.all(
-      config.files.map(async (path) => {
+      files.map(async (path) => {
         const res = await fetch(packageBase + path)
         console.log(res)
         const file = { contentType: res.headers.get("Content-Type"), contents: await res.text() }
@@ -27,20 +54,9 @@ export class AutomergeRegistry {
       Object.entries(config).forEach(([k, v]) => (doc[k] = v))
       doc.fileContents = fileContents
     })
-    const { name, version } = config
-    if (!name || !version) {
-      throw new Error("Invalid package definition. Missing name or version")
-    }
-    this.myRegistryDocHandle.change((doc) => {
-      if (!doc.packages[name]) {
-        doc.packages[name] = {}
-      }
-      doc.packages[name][version] = "automerge:" + handle.documentId
-    })
 
-    console.log("cached package", name, version, handle.documentId)
-    console.log("package doc", handle.doc)
-    return [handle, this.myRegistryDocHandle]
+    console.log("cached package", name, version, handle.documentId, handle.doc)
+    return handle
   }
 }
 const automergeProvider = {
