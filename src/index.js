@@ -2,32 +2,47 @@ import { Generator } from "@jspm/generator"
 import { Repo } from "@automerge/automerge-repo"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
-import * as Automerge from "@automerge/automerge"
+import { AutomergeRegistry } from "./automerge-provider.js"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
   storage: new LocalForageStorageAdapter(),
   network: [new BrowserWebSocketClientAdapter("wss://sync.inkandswitch.com")],
 })
-window.repo = repo // put it on the window to reach it from the fetch command elsewhere (hack)
-window.Automerge = Automerge // put this on the window too, because the published version doesn't work due to the WASM import situation
-console.log("repo loaded", repo)
 
-const generator = new Generator({
-  // currently we need production mode so all dependencies get bundled into a single esm module
-  // todo: fix that modules with sub imports can also be loaded
-  env: ["production", "browser", "module"],
-})
+// put it on the window to reach it from the fetch command elsewhere (this is a hack)
+window.repo = repo
 
-const BOOTSTRAP_DOC_ID = (window.BOOTSTRAP_DOC_ID =
-  localStorage.BOOTSTRAP_DOC_ID || "bec0e828-838f-4484-82ad-b2d52bc03f71")
+function bootstrap() {
+  const registryDocId = localStorage.getItem("registryUrl")
+  if (!registryDocId) {
+    const registryDocHandle = repo.create()
+    registryDocHandle.change((doc) => {
+      doc.packages = {}
+    })
+    localStorage.setItem("registryUrl", registryDocHandle.documentId)
+    return registryDocHandle
+  } else {
+    const registryDocHandle = repo.find(registryDocId)
+    return registryDocHandle
+  }
+}
 
+const registryDocHandle = bootstrap()
+await registryDocHandle.value()
+const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
+
+const generator = (window.generator = new Generator())
+await generator.install("codemirror", "@automerge/automerge")
+const iM = generator.importMap
+const r = generator.traceMap.resolver
+
+const packageBase = await r.getPackageBase(iM.imports["codemirror"])
+console.log(await registry.cachePackage(packageBase, await r.getPackageConfig(packageBase)))
+
+/* 
+const generator = new Generator({ env: ["production", "browser", "module"] })
 await generator.install(`./repo/${BOOTSTRAP_DOC_ID}`)
-const importMap = generator.getMap()
-
-console.log("import map", importMap)
-importShim.addImportMap(importMap)
-
-console.log("import module", BOOTSTRAP_DOC_ID)
-
+importShim.addImportMap(generator.getMap())
 await import(BOOTSTRAP_DOC_ID)
+ */

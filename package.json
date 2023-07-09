@@ -9,8 +9,11 @@
   "author": "pvh@pvh.ca",
   "license": "MIT",
   "devDependencies": {
+    "@automerge/automerge-repo": "^0.1.2",
     "jspm": "^3.0.1",
-    "prettier": "^2.8.8"
+    "prettier": "^2.8.8",
+    "tsc": "^2.0.4",
+    "typescript": "^5.1.6"
   },
   "dependencies": {
     "serve": "^14.2.0"
