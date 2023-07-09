@@ -4,7 +4,7 @@
 -->
 <html>
   <script async src="./es-module-shims@1.7.3.js"></script>
-  <script type="importmap-shim">
+  <script type="importmap">
     {
       "imports": {
         "@automerge/automerge-repo": "https://ga.jspm.io/npm:@automerge/automerge-repo@0.1.2/dist/index.js",
@@ -111,7 +111,7 @@
         "xstate": "https://ga.jspm.io/npm:xstate@4.38.0/es/index.js",
         "xstate/lib/waitFor.js": "https://ga.jspm.io/npm:xstate@4.38.0/lib/dev.waitFor.js",
         "yallist": "https://ga.jspm.io/npm:yallist@3.1.1/yallist.js"
-            },
+      },
       "scopes": {
         "https://ga.jspm.io/npm:@automerge/automerge@2.1.0-alpha.8/": {
           "uuid": "https://ga.jspm.io/npm:uuid@9.0.0/dist/esm-browser/index.js"
@@ -197,9 +197,6 @@
     }
     window.process = { env: {}, versions: {} }
   </script>
-  <script type="module-shim" src="./index.js"></script>
-  <!--<script type="module-shim">
-    const app = import("https://faux-automerge.com/3cd7c303-1c97-4552-a099-f43d151b6534")
-  </script>-->
-  <div>Hang on a moment...</div>
+  <script type="module" src="./index.js"></script>
+  <div>Standby for launch...</div>
 </html>
