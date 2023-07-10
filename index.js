@@ -28,19 +28,29 @@ function bootstrap() {
   }
 }
 
+const registryDocHandle = bootstrap()
+await registryDocHandle.value() // block until we've loaded our registry doc
+const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
+registry.installFetch()
+
+window.esmsInitOptions = {
+  shimMode: true,
+  mapOverrides: true,
+  fetch: window.fetch,
+}
+window.process = { env: {}, versions: {} }
+await import("./es-module-shims@1.7.3.js")
+
 const cachingGenerator = (window.cachingGenerator = new Generator())
 await cachingGenerator.install(["codemirror", "@automerge/automerge"])
 console.log("installed packages", cachingGenerator.getMap())
 
-const registryDocHandle = bootstrap()
-await registryDocHandle.value() // block until we've loaded our registry doc
-const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
 await registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
 console.log("cached those packages", cachingGenerator.getMap())
 
-registry.installFetch()
 const generator = (window.generator = new Generator({
   importMap: importShim.importMap,
+  resolutions: { "@automerge/automerge-wasm": "./web/" },
   defaultProvider: "automerge",
   customProviders: {
     automerge: registry.jspmProvider(),
@@ -53,8 +63,8 @@ await generator.install(["codemirror", "@automerge/automerge"])
 console.log(generator.getMap())
 importShim.addImportMap(generator.getMap())
 
-const CodeMirror = await import("codemirror")
-const Automerge = await import("@automerge/automerge")
+const CodeMirror = await importShim("codemirror")
+const Automerge = await importShim("@automerge/automerge")
 console.log("CodeMirror", CodeMirror)
 console.log("Automerge", Automerge)
 console.log("Finished!")
