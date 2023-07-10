@@ -40,6 +40,7 @@ console.log("cached those packages", cachingGenerator.getMap())
 
 registry.installFetch()
 const generator = (window.generator = new Generator({
+  importMap: importShim.importMap,
   defaultProvider: "automerge",
   customProviders: {
     automerge: registry.jspmProvider(),
@@ -50,7 +51,12 @@ const generator = (window.generator = new Generator({
 console.log("installing against local package listing")
 await generator.install(["codemirror", "@automerge/automerge"])
 console.log(generator.getMap())
+importShim.addImportMap(generator.getMap())
 
+const CodeMirror = await import("codemirror")
+const Automerge = await import("@automerge/automerge")
+console.log("CodeMirror", CodeMirror)
+console.log("Automerge", Automerge)
 console.log("Finished!")
 
 /* 

@@ -4,7 +4,7 @@
 -->
 <html>
   <script async src="./es-module-shims@1.7.3.js"></script>
-  <script type="importmap">
+  <script type="importmap-shim">
     {
       "imports": {
         "@automerge/automerge-repo": "https://ga.jspm.io/npm:@automerge/automerge-repo@0.1.2/dist/index.js",
@@ -130,6 +130,6 @@
     }
     window.process = { env: {}, versions: {} }
   </script>
-  <script type="module" src="./index.js"></script>
+  <script type="module-shim" src="./index.js"></script>
   <div>Standby for launch...</div>
 </html>
