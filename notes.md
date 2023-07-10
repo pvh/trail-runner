@@ -10,12 +10,17 @@
    * guy, what's the optimum workflow here?
  * [FOR NOW] if a module has an importMap, before module loading, we will manually call addImportMap(doc.importMap)
    * (would this be a good hook somewhere?)
+ * [GUY sez] you're always going to have a top level map which contains JSPM/automerge-repo
+   * top level resolutions will alter dependency resolutions
+   * (in the general case)
+   * "any dependency change is a global dependency change"
+   * ___you may not have a network connection__
+   * we want to maintain a constraint-cache 
   
   interface TextDoc {
     contentType: "application/javascript" | "application/json"
     text: string
   }
-
 
 ## Package Caching Strategy
 * We can't (and won't try) to cache all of NPM.
@@ -44,11 +49,45 @@ export interface PackageConfig {
 
 interface PackageDoc extends PackageConfig {
   FileContents: Map<path, TextDoc>
-  ImportMap?: Map<packageName, Url>
+  /* SuggestedResolutions (full deep graph for this module):
+    "lodash" => "npm:lodash@18.0.2#min" */
+  RegistrySubgraph (as above):
+    "npm:lodash@18.0.2#min" => "automerge:<uuuid>"
 }
+
+to load a package from someone else
+-> fetch the packagedoc
+ -> walk the packagedoc's registry subgraph and copy anything new to yours
+
+const myRegistry = new TrailRunnerPackageRegistry(myRegistryDoc)
+myRegistry.sync(packageDoc.suggestedVersions)
+ -> new Generator({
+  importMap: importShim.importMap, 
+  customProviders: {
+    "automerge": new AutomergeProvider(myRegistryDoc)
+  }); 
+  generator.install([...packageDoc.dependencies]);
+  importShim.addImportMap(generator.getMap())
+
 
   automerge->npm module caching approach
   ---
+
+"ExactPackage" in URL form:
+automerge:react@18.02#min
+https://ga.jspm.io/packages/npm:react@18.02#min/{package.json, index.js, ...}
+shortcut for major version
+
+JSPM resolver:
+version string -> 
+  "react" = latest stable
+  "react@" = latest unstable
+  "react@<version>" = latest matching (18 => 18.2.0, 18.1 => 18.1.2)
+
+registryService -> lookups & version resolution
+global idempotent package data (uniquely keyed by url -> package/version/layer)
+
+automerge:<packageDocId>
   
 function cachePackage(config: PackageConfig) {
   // first, fetch all the file contents: let's not save a partial module
