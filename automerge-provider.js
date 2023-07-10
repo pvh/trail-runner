@@ -28,7 +28,7 @@ registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
 // should these be separate docs?
 // TODO: support layers
 
-const AUTOMERGE_REGISTRY_PREFIX = "ftp://automerge-registry.ca/"
+const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
 export class AutomergeRegistry {
   automergeRepo
   myRegistryDocHandle
@@ -40,21 +40,27 @@ export class AutomergeRegistry {
   async update(importMap, resolver) {
     console.log("updating package registry")
     // First, direct imports
-    Promise.all(
+    await Promise.all(
       Object.values(importMap.imports).map(async (packageEntryPoint) => {
         const packageBase = await resolver.getPackageBase(packageEntryPoint)
         await this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
       })
     )
     // Next, scopes
-    Promise.all(
-      Object.values(importMap.scopes).map(async (scope) => {
+
+    const results = Object.values(importMap.scopes).map(async (scope) => {
+      await Promise.all(
         Object.values(scope).map(async (packageEntryPoint) => {
           const packageBase = await resolver.getPackageBase(packageEntryPoint)
-          await this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
+          return this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
         })
-      })
-    )
+      )
+    })
+
+    await Promise.all(results)
+
+    console.log("updated package registry", this.myRegistryDocHandle.doc.packages)
+    return
   }
 
   // could add a force flag to re-cache packages
@@ -94,7 +100,6 @@ export class AutomergeRegistry {
     await Promise.all(
       files.map(async (path) => {
         const res = await fetch(packageBase + path)
-        console.log(res)
         const file = { contentType: res.headers.get("Content-Type"), contents: await res.text() }
         fileContents[path] = file // WASM / binary data?
       })
@@ -115,33 +120,26 @@ export class AutomergeRegistry {
     return {
       // called as resolveLatestTarget.bind(generator)
       resolveLatestTarget: async (target, layer, parentUrl) => {
-        console.log(target, layer, parentUrl)
-        console.log(this.myRegistryDocHandle.doc)
-
         const { registry, name, range, stable } = target
         if (!this.myRegistryDocHandle.doc.packages[name])
           throw new Error(`package ${name} not found in registry`)
         const versions = Object.keys(this.myRegistryDocHandle.doc.packages[name])
         const version = range.bestMatch(versions, stable).toString()
         if (!version) return null
-        console.log({ registry, name, version })
         return { registry, name, version }
       },
       async pkgToUrl(pkg, layer) {
         const { registry, name, version } = pkg
-        console.log(pkg, layer)
         const url = `${AUTOMERGE_REGISTRY_PREFIX}${name}@${version}/`
-        console.log(url)
         return url
       },
       parseUrlPkg(url) {
         if (!url.startsWith(AUTOMERGE_REGISTRY_PREFIX)) return null
-        console.log("parseUrlPkg", url)
-        const regex = /^ftp:\/\/automerge-registry.ca\/(?<name>.*)@(?<version>.*)\/(?<subpath>.*)$/
+        const regex =
+          /^https:\/\/automerge-registry.ca\/(?<name>.*)@(?<version>.*)\/(?<subpath>.*)$/
         const { name, version, subpath } = url.match(regex).groups
-        console.log("parseUrlPkg succeeded", url, name, version, subpath)
 
-        return { registry: "automerge-registry", name, version, subpath }
+        return { layer: "default", pkg: { registry: "automerge-registry", name, version }, subpath }
       },
       ownsUrl(url) {
         console.log("ownsUrl", url)
@@ -168,53 +166,56 @@ export class AutomergeRegistry {
     }
   }
 
+  // I should set up a guard to make sure we don't use the jspmProvider until
+  // we're prepared to actually resolve packages via this fetch.
   installFetch() {
     const previousFetch = window.fetch
     window.fetch = async (url, options) => {
-      if (!url.startsWith(AUTOMERGE_REGISTRY_PREFIX)) {
-        return previousFetch(url, options)
-      }
+      try {
+        if (!url.startsWith(AUTOMERGE_REGISTRY_PREFIX)) {
+          return previousFetch(url, options)
+        }
 
-      console.log("fetching", url)
-      const parsedUrl = this.#parseUrl(url)
-      const REPO_PATH_REGEX = /^\/(?<name>.+)@(?<version>[^#]*)\/(?<fileName>.*)$/
-      let { name, version, layer, fileName } = parsedUrl.pathname.match(REPO_PATH_REGEX).groups
-      console.log("parsed to name", name, "version", version, "layer", layer, "fileName", fileName)
+        const parsedUrl = this.#parseUrl(url)
+        const REPO_PATH_REGEX = /^\/(?<name>.+)@(?<version>[^/]*)\/(?<fileName>.*)$/
+        let { name, version, layer, fileName } = parsedUrl.pathname.match(REPO_PATH_REGEX).groups
 
-      const registry = await this.myRegistryDocHandle.value()
-      const packageDocumentId = registry.packages[name][version].split(":")[1]
+        const registry = await this.myRegistryDocHandle.value()
+        const packageDocumentId = registry.packages[name][version].split(":")[1]
 
-      const packageHandle = repo.find(packageDocumentId)
-      const pkg = await packageHandle.value()
-      const { fileContents, ...packageJson } = pkg
+        const packageHandle = repo.find(packageDocumentId)
+        const pkg = await packageHandle.value()
+        const { fileContents, ...packageJson } = pkg
 
-      // I should remove this special case
-      if (fileName === "package.json") {
-        return new Response(JSON.stringify(packageJson), {
+        // I should remove this special case
+        if (fileName === "package.json") {
+          return new Response(JSON.stringify(packageJson), {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+        }
+
+        if (fileName === "index.js") {
+          // Uhhhh, guy, is ths right? this seems wrong.
+          fileName = packageJson["module"].replace(/^\.\//, "") // or main?
+          console.log("special handling of index.js", fileName)
+        }
+
+        const file = fileContents[fileName]
+        if (!file) {
+          return new Response("not found", { status: 404 })
+        }
+
+        return new Response(file.contents, {
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": file.contentType,
           },
         })
+      } catch (e) {
+        console.error("my fetch failed", url, e)
+        throw e
       }
-
-      if (fileName === "index.js") {
-        // Uhhhh, guy, is ths right? this seems wrong.
-        fileName = packageJson["module"].replace(/^\.\//, "") // or main?
-        console.log("special handling of index.js", fileName)
-      }
-
-      const file = fileContents[fileName]
-      if (!file) {
-        console.log(`package ${name}@${version} does not have file ${fileName}`)
-        return new Response("not found", { status: 404 })
-      }
-
-      console.log("returning", fileName, file.contentType)
-      return new Response(file.contents, {
-        headers: {
-          "Content-Type": file.contentType,
-        },
-      })
     }
   }
 }

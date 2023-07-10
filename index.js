@@ -28,13 +28,15 @@ function bootstrap() {
   }
 }
 
+const cachingGenerator = (window.cachingGenerator = new Generator())
+await cachingGenerator.install(["codemirror", "@automerge/automerge"])
+console.log("installed packages", cachingGenerator.getMap())
+
 const registryDocHandle = bootstrap()
 await registryDocHandle.value() // block until we've loaded our registry doc
 const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
-
-const cachingGenerator = (window.cachingGenerator = new Generator())
-await cachingGenerator.install(["codemirror", "@automerge/automerge"])
-registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
+await registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
+console.log("cached those packages", cachingGenerator.getMap())
 
 registry.installFetch()
 const generator = (window.generator = new Generator({
@@ -48,7 +50,9 @@ const generator = (window.generator = new Generator({
 console.log("installing against local package listing")
 await generator.install(["codemirror", "@automerge/automerge"])
 console.log(generator.getMap())
+
 console.log("Finished!")
+
 /* 
 const generator = new Generator({ env: ["production", "browser", "module"] })
 await generator.install(`./repo/${BOOTSTRAP_DOC_ID}`)
