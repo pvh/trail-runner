@@ -3,7 +3,6 @@ import { Repo } from "@automerge/automerge-repo"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { AutomergeRegistry } from "./automerge-provider.js"
-import { s } from "./generator-b4f53f2d.js"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
@@ -30,7 +29,7 @@ function bootstrap() {
 }
 
 const registryDocHandle = bootstrap()
-await registryDocHandle.value()
+await registryDocHandle.value() // block until we've loaded our registry doc
 const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
 
 const cachingGenerator = (window.cachingGenerator = new Generator())
