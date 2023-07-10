@@ -142,7 +142,6 @@ export class AutomergeRegistry {
         return { layer: "default", pkg: { registry: "automerge-registry", name, version }, subpath }
       },
       ownsUrl(url) {
-        console.log("ownsUrl", url)
         return url.startsWith(AUTOMERGE_REGISTRY_PREFIX)
       },
       /*resolveBuiltin(specifier, env) {
@@ -170,7 +169,7 @@ export class AutomergeRegistry {
   // we're prepared to actually resolve packages via this fetch.
   installFetch() {
     const previousFetch = window.fetch
-    window.fetch = async (url, options) => {
+    const myFetch = async (url, options) => {
       try {
         if (!url.startsWith(AUTOMERGE_REGISTRY_PREFIX)) {
           return previousFetch(url, options)
@@ -217,6 +216,7 @@ export class AutomergeRegistry {
         throw e
       }
     }
+    window.fetch = myFetch
   }
 }
 
