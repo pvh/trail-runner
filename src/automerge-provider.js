@@ -27,6 +27,7 @@ registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
 // TODO: support different registries: we should separate native from npm
 // should these be separate docs?
 // TODO: support layers
+import { Generator } from "@jspm/generator"
 
 const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
 export class AutomergeRegistry {
@@ -37,8 +38,21 @@ export class AutomergeRegistry {
     this.myRegistryDocHandle = myRegistryDocHandle
   }
 
-  async update(importMap, resolver) {
+  async update(pkgName) {
+    const cachingGenerator = new Generator({
+      resolutions: {
+        "@automerge/automerge-wasm": "./web/",
+        [pkgName]: "https://automerge-registry.ca/@trail-runner/bootstrap@0.0.1/",
+      },
+    })
+    await cachingGenerator.link(pkgName)
+    console.log("prepared packages", cachingGenerator.getMap())
+    await this.cacheImportMap(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
+  }
+
+  async cacheImportMap(importMap, resolver) {
     console.log("updating package registry")
+
     // First, direct imports
     await Promise.all(
       Object.values(importMap.imports).map(async (packageEntryPoint) => {
@@ -46,8 +60,8 @@ export class AutomergeRegistry {
         await this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
       })
     )
-    // Next, scopes
 
+    // Next, scopes
     const results = Object.values(importMap.scopes).map(async (scope) => {
       await Promise.all(
         Object.values(scope).map(async (packageEntryPoint) => {
@@ -81,13 +95,20 @@ export class AutomergeRegistry {
     const pkg = await this.fetchPackage(packageBase, config)
     console.log("fetched package", name, version)
 
+    this.linkPackage(name, version, pkg.documentId)
+  }
+
+  linkPackage(name, version, documentId) {
+    const packageUrl = "automerge:" + documentId
     this.myRegistryDocHandle.change((doc) => {
       if (!doc.packages[name]) {
         doc.packages[name] = {}
       }
-      doc.packages[name][version] = "automerge:" + pkg.documentId
+      if (doc.packages[name][version] !== packageUrl) {
+        doc.packages[name][version] = packageUrl
+      }
     })
-    console.log("registered package", name, version, pkg.documentId)
+    console.log("registered package", name, version, documentId)
   }
 
   async fetchPackage(packageBase, config) {
@@ -124,8 +145,11 @@ export class AutomergeRegistry {
         if (!this.myRegistryDocHandle.doc.packages[name])
           throw new Error(`package ${name} not found in registry`)
         const versions = Object.keys(this.myRegistryDocHandle.doc.packages[name])
-        const version = range.bestMatch(versions, stable).toString()
-        if (!version) return null
+        const sver = range.bestMatch(versions, stable)
+        if (!sver) {
+          return null
+        }
+        const version = sver.toString()
         return { registry, name, version }
       },
       async pkgToUrl(pkg, layer) {
@@ -136,9 +160,8 @@ export class AutomergeRegistry {
       parseUrlPkg(url) {
         if (!url.startsWith(AUTOMERGE_REGISTRY_PREFIX)) return null
         const regex =
-          /^https:\/\/automerge-registry.ca\/(?<name>.*)@(?<version>.*)\/(?<subpath>.*)$/
+          /^https:\/\/automerge-registry.ca\/(?<name>.*)@(?<version>[^\/]*)\/(?<subpath>.*)$/
         const { name, version, subpath } = url.match(regex).groups
-
         return { layer: "default", pkg: { registry: "automerge-registry", name, version }, subpath }
       },
       ownsUrl(url) {
@@ -197,7 +220,12 @@ export class AutomergeRegistry {
 
         if (fileName === "index.js") {
           // Uhhhh, guy, is ths right? this seems wrong.
-          fileName = packageJson["module"].replace(/^\.\//, "") // or main?
+          fileName = packageJson["module"] || packageJson["main"] || "index.js"
+          fileName = fileName.replace(/^\.\//, "") // or main?
+          // zeit/ms has a package.json with "main": "./index"
+          if (fileName === "index") {
+            fileName = "index.js"
+          }
           console.log("special handling of index.js", fileName)
         }
 
@@ -219,51 +247,3 @@ export class AutomergeRegistry {
     window.fetch = myFetch
   }
 }
-
-/*
-      // intercept requests to /repo/$documentId
-      if (parsedUrl && parsedUrl.origin === origin) {
-        const match = parsedUrl.pathname.match(REPO_PATH_REGEX)
-
-        if (match) {
-          const documentId = match[1]
-          const fileName = match[3]
-          const doc = await repo.find(documentId).value()
-
-          switch (fileName) {
-            case "package.json": {
-              const packageJson = JSON.stringify({ dependencies: doc.dependencies ?? {} })
-              return new Response(packageJson, {
-                headers: {
-                  "Content-Type": "application/json",
-                },
-              })
-            }
-            case "index.js": {
-              // always prefer dist over source (we should stop using source at all)
-              const code = doc.dist ?? doc.source
-              return doc.dist !== undefined || doc.source !== undefined
-                ? new Response(doc.dist || doc.source, {
-                    headers: {
-                      "Content-Type": "application/javascript",
-                    },
-                  })
-                : new Response("Not Found", {
-                    headers: {
-                      "Content-Type": "text/plain",
-                    },
-                    status: 404,
-                  })
-            }
-            default:
-              return new Response("Not Found", {
-                headers: {
-                  "Content-Type": "text/plain",
-                },
-                status: 404,
-              })
-          }
-        }
-      }
-      
-}*/

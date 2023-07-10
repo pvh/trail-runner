@@ -4,6 +4,9 @@ import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-loc
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { AutomergeRegistry } from "./automerge-provider.js"
 
+const PRECOOKED_BOOTSTRAP_DOC_ID = "441f8ea5-c86f-49a7-87f9-9cc60225e15e"
+const PRECOOKED_REGISTRY_DOC_ID = "6b9ae2f8-0629-49d1-a103-f7d4ae2a31e0"
+
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
   storage: new LocalForageStorageAdapter(),
@@ -13,23 +16,23 @@ const repo = new Repo({
 // put it on the window to reach it from the fetch command elsewhere (this is a hack)
 window.repo = repo
 
-function bootstrap() {
-  const registryDocId = localStorage.getItem("registryUrl")
-  if (!registryDocId) {
-    const registryDocHandle = repo.create()
-    registryDocHandle.change((doc) => {
-      doc.packages = {}
-    })
-    localStorage.setItem("registryUrl", registryDocHandle.documentId)
-    return registryDocHandle
+function bootstrap(key, initialDocumentFn) {
+  const docId = localStorage.getItem(key)
+  if (!docId) {
+    const handle = initialDocumentFn(repo)
+    localStorage.setItem(key, handle.documentId)
+    return handle
   } else {
-    const registryDocHandle = repo.find(registryDocId)
-    return registryDocHandle
+    const handle = repo.find(docId)
+    return handle
   }
 }
 
-const registryDocHandle = bootstrap()
-await registryDocHandle.value() // block until we've loaded our registry doc
+// you can BYO but we'll provide a default
+const registryDocHandle = bootstrap("registryKey", (doc) => repo.find(PRECOOKED_REGISTRY_DOC_ID))
+const bootstrapDocHandle = bootstrap("bootstrapKey", (doc) => repo.find(PRECOOKED_BOOTSTRAP_DOC_ID))
+
+await registryDocHandle.value()
 const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
 registry.installFetch()
 
@@ -41,15 +44,14 @@ window.esmsInitOptions = {
 window.process = { env: {}, versions: {} }
 await import("./es-module-shims@1.7.3.js")
 
-const cachingGenerator = (window.cachingGenerator = new Generator())
-await cachingGenerator.install(["codemirror", "@automerge/automerge"])
-console.log("installed packages", cachingGenerator.getMap())
+// To bootstrap the system from scratch, we need to make sure our initial
+// registry has the dependencies for the bootstrap program.
+// We'll manually record it here (versions don't matter, at least for now):
+registry.linkPackage("@trail-runner/bootstrap", "0.0.1", `${PRECOOKED_BOOTSTRAP_DOC_ID}`)
+await registry.update("@trail-runner/bootstrap")
 
-await registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
-console.log("cached those packages", cachingGenerator.getMap())
-
+console.log("now installing against local package listing")
 const generator = (window.generator = new Generator({
-  importMap: importShim.importMap,
   resolutions: { "@automerge/automerge-wasm": "./web/" },
   defaultProvider: "automerge",
   customProviders: {
@@ -57,21 +59,11 @@ const generator = (window.generator = new Generator({
   },
 }))
 
+await generator.install("@trail-runner/bootstrap") // this should load the package above
+
 // this one should resolve to automerge URLs found in your registry document
-console.log("installing against local package listing")
-await generator.install(["codemirror", "@automerge/automerge"])
 console.log(generator.getMap())
 importShim.addImportMap(generator.getMap())
 
-const CodeMirror = await importShim("codemirror")
-const Automerge = await importShim("@automerge/automerge")
-console.log("CodeMirror", CodeMirror)
-console.log("Automerge", Automerge)
-console.log("Finished!")
-
-/* 
-const generator = new Generator({ env: ["production", "browser", "module"] })
-await generator.install(`./repo/${BOOTSTRAP_DOC_ID}`)
-importShim.addImportMap(generator.getMap())
-await import(BOOTSTRAP_DOC_ID)
- */
+const Bootstrap = await import("@trail-runner/bootstrap")
+console.log("Success!", Bootstrap)
