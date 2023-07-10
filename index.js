@@ -33,28 +33,23 @@ const registryDocHandle = bootstrap()
 await registryDocHandle.value()
 const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
 
-const generator = (window.generator = new Generator())
-await generator.install("codemirror", "@automerge/automerge")
-const iM = generator.importMap
-const r = generator.traceMap.resolver
+const cachingGenerator = (window.cachingGenerator = new Generator())
+await cachingGenerator.install(["codemirror", "@automerge/automerge"])
+registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
 
-// First, imports
-Promise.all(
-  Object.values(iM.imports).map(async (packageEntryPoint) => {
-    const packageBase = await r.getPackageBase(packageEntryPoint)
-    await registry.cachePackage(packageBase, await r.getPackageConfig(packageBase))
-  })
-)
-// Next, scopes
-Promise.all(
-  Object.values(iM.scopes).map(async (scope) => {
-    Object.values(scope).map(async (packageEntryPoint) => {
-      const packageBase = await r.getPackageBase(packageEntryPoint)
-      await registry.cachePackage(packageBase, await r.getPackageConfig(packageBase))
-    })
-  })
-)
+registry.installFetch()
+const generator = (window.generator = new Generator({
+  defaultProvider: "automerge",
+  customProviders: {
+    automerge: registry.jspmProvider(),
+  },
+}))
 
+// this one should resolve to automerge URLs found in your registry document
+console.log("installing against local package listing")
+await generator.install(["codemirror", "@automerge/automerge"])
+console.log(generator.getMap())
+console.log("Finished!")
 /* 
 const generator = new Generator({ env: ["production", "browser", "module"] })
 await generator.install(`./repo/${BOOTSTRAP_DOC_ID}`)
