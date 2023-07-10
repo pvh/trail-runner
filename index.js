@@ -14,6 +14,7 @@ window.Automerge = Automerge // put this on the window too, because the publishe
 console.log("repo loaded", repo)
 
 const generator = new Generator({
+  inputMap: importShim.getImportMap(),
   // currently we need production mode so all dependencies get bundled into a single esm module
   // todo: fix that modules with sub imports can also be loaded
   env: ["production", "browser", "module"],
@@ -21,6 +22,8 @@ const generator = new Generator({
 
 const BOOTSTRAP_DOC_ID = (window.BOOTSTRAP_DOC_ID =
   localStorage.BOOTSTRAP_DOC_ID || "bec0e828-838f-4484-82ad-b2d52bc03f71")
+
+console.log("bootstrap", BOOTSTRAP_DOC_ID)
 
 await generator.install(`./repo/${BOOTSTRAP_DOC_ID}`)
 const importMap = generator.getMap()
