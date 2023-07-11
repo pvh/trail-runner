@@ -2,35 +2,80 @@ import { Generator } from "@jspm/generator"
 import { Repo } from "@automerge/automerge-repo"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
-import * as Automerge from "@automerge/automerge"
+import { AutomergeRegistry } from "./automerge-provider.js"
+
+const PRECOOKED_BOOTSTRAP_DOC_ID = "441f8ea5-c86f-49a7-87f9-9cc60225e15e"
+const PRECOOKED_REGISTRY_DOC_ID = "6b9ae2f8-0629-49d1-a103-f7d4ae2a31e0"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
   storage: new LocalForageStorageAdapter(),
   network: [new BrowserWebSocketClientAdapter("wss://sync.inkandswitch.com")],
 })
-window.repo = repo // put it on the window to reach it from the fetch command elsewhere (hack)
-window.Automerge = Automerge // put this on the window too, because the published version doesn't work due to the WASM import situation
-console.log("repo loaded", repo)
 
-const generator = new Generator({
-  inputMap: importShim.getImportMap(),
-  // currently we need production mode so all dependencies get bundled into a single esm module
-  // todo: fix that modules with sub imports can also be loaded
-  env: ["production", "browser", "module"],
-})
+// put it on the window to reach it from the fetch command elsewhere (this is a hack)
+window.repo = repo
 
-const BOOTSTRAP_DOC_ID = (window.BOOTSTRAP_DOC_ID =
-  localStorage.BOOTSTRAP_DOC_ID || "bec0e828-838f-4484-82ad-b2d52bc03f71")
+function bootstrap(key, initialDocumentFn) {
+  const docId = localStorage.getItem(key)
+  if (!docId) {
+    const handle = initialDocumentFn(repo)
+    localStorage.setItem(key, handle.documentId)
+    return handle
+  } else {
+    const handle = repo.find(docId)
+    return handle
+  }
+}
 
-console.log("bootstrap", BOOTSTRAP_DOC_ID)
+// you can BYO but we'll provide a default
+const registryDocHandle = bootstrap("registryKey", (doc) => repo.find(PRECOOKED_REGISTRY_DOC_ID))
+const bootstrapDocHandle = bootstrap("bootstrapKey", (doc) => repo.find(PRECOOKED_BOOTSTRAP_DOC_ID))
 
-await generator.install(`./repo/${BOOTSTRAP_DOC_ID}`)
-const importMap = generator.getMap()
+const rDoc = await registryDocHandle.value()
+const bDoc = await bootstrapDocHandle.value()
 
-console.log("import map", importMap)
-importShim.addImportMap(importMap)
+console.log("Registry Doc ID:", registryDocHandle.documentId, rDoc)
+console.log("Bootstrap Doc ID:", bootstrapDocHandle.documentId, bDoc)
 
-console.log("import module", BOOTSTRAP_DOC_ID)
+// temporary hack to make the bootstrap doc available to the existing code
+window.BOOTSTRAP_DOC_ID = bootstrapDocHandle.documentId
 
-await import(BOOTSTRAP_DOC_ID)
+const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
+registry.installFetch()
+
+window.esmsInitOptions = {
+  shimMode: true,
+  mapOverrides: true,
+  fetch: window.fetch,
+}
+window.process = { env: {}, versions: {} }
+await import("./es-module-shims@1.7.3.js")
+
+// To bootstrap the system from scratch, we need to make sure our initial
+// registry has the dependencies for the bootstrap program.
+// We'll manually record it here (versions don't matter, at least for now):
+
+// registry.linkPackage("@trail-runner/bootstrap", "0.0.1", `${PRECOOKED_BOOTSTRAP_DOC_ID}`)
+// await registry.update("@trail-runner/content-type-raw")
+
+console.log("now installing against local package listing")
+const generator = (window.generator = new Generator({
+  resolutions: { "@automerge/automerge-wasm": "./web/" },
+  defaultProvider: "automerge",
+  customProviders: {
+    automerge: registry.jspmProvider(),
+  },
+}))
+
+console.log("installing bootstrap")
+await generator.install("@trail-runner/bootstrap") // this should load the package above
+
+// this one should resolve to automerge URLs found in your registry document
+console.log("generated version", generator.getMap())
+importShim.addImportMap(generator.getMap())
+console.log("merged version", importShim.ImportMap)
+
+console.log("loading bootstrap")
+const Bootstrap = await import("@trail-runner/bootstrap")
+console.log("Success!")
