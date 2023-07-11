@@ -1,101 +1,81 @@
 import { Generator } from "@jspm/generator"
-import { ImportMap } from "@jspm/import-map"
-
 import { Repo } from "@automerge/automerge-repo"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
+import { AutomergeRegistry } from "./automerge-provider.js"
+
+const PRECOOKED_BOOTSTRAP_DOC_ID = "441f8ea5-c86f-49a7-87f9-9cc60225e15e"
+const PRECOOKED_REGISTRY_DOC_ID = "6b9ae2f8-0629-49d1-a103-f7d4ae2a31e0"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
   storage: new LocalForageStorageAdapter(),
   network: [new BrowserWebSocketClientAdapter("wss://sync.inkandswitch.com")],
 })
-window.repo = repo // put it on the window to reach it from the fetch command elsewhere (hack)
-console.log("repo loaded", repo)
 
-// Step two: load a document from the repo.
-const handle = repo.find("043862bd-12e1-4b22-87d2-fc9fc7fe4ed1")
-const value = await handle.value()
-console.log("document loaded")
+// put it on the window to reach it from the fetch command elsewhere (this is a hack)
+window.repo = repo
 
-// (I had trouble using a more protocol-ey prefix, so this is a hack for now.)
-const automergePrefix = "https://faux-automerge.com/"
-
-// Check the document hash for "shouldRebuild" and if it's there, rebuild the import map.
-const currentUrl = new URL(window.location.href)
-const shouldRebuild = currentUrl.searchParams.get("shouldRebuild") !== null
-
-if (!value.importMap || shouldRebuild) {
-  console.log("Creating new importMap from", value.importMap)
-  const generator = new Generator({
-    importMap: value.importMap,
-    env: ["production", "browser", "module"], // production saved us from a hack
-  })
-  await generator.link("./app.js")
-  const map = generator.getMap()
-  console.log("map", map)
-
-  if (map.imports) {
-    for (const [key, value] of Object.entries(map.imports)) {
-      if (value.startsWith(automergePrefix)) {
-        console.log("Skipping automerge import", key, value)
-      }
-      if (value.startsWith("https://ga.jspm.io/npm:")) {
-        const code = await (await fetch(value)).text()
-        const textHandle = repo.create()
-        textHandle.change((d) => {
-          d.text = code
-        })
-
-        map.imports[key] = automergePrefix + textHandle.documentId
-        console.log("Replaced import", key, value, "with", map.imports[key])
-      }
-    }
+function bootstrap(key, initialDocumentFn) {
+  const docId = localStorage.getItem(key)
+  if (!docId) {
+    const handle = initialDocumentFn(repo)
+    localStorage.setItem(key, handle.documentId)
+    return handle
+  } else {
+    const handle = repo.find(docId)
+    return handle
   }
-
-  if (!map.imports) {
-    map.imports = {}
-  }
-
-  const scopes = map.scopes
-  for (const scope in scopes) {
-    console.log("remapping", scope)
-    if (scope === automergePrefix) {
-      continue
-    }
-    for (const [key, value] of Object.entries(map.scopes[scope])) {
-      if (value.startsWith(automergePrefix)) {
-        console.log("Skipping automerge import", key, value)
-      }
-      if (value.startsWith("https://ga.jspm.io/npm:")) {
-        const code = await (await fetch(value)).text()
-        const textHandle = repo.create()
-        textHandle.change((d) => {
-          d.text = code
-        })
-
-        map.imports[key] = automergePrefix + textHandle.documentId
-        console.log("Replaced import", key, value, "with", map.imports[key])
-      }
-    }
-    delete map.scopes[scope]
-  }
-  console.log("after rewrite", map)
-
-  handle.change((d) => {
-    console.log("Result", map)
-    d.importMap = map
-  })
-} else {
-  console.log("found ", value.importMap)
 }
 
-try {
-  const R = await import("react")
-  console.log("should not have, but managed to import", R)
-} catch (e) {
-  console.log("All is well: we shouldn't be able to load React yet.")
-}
+// you can BYO but we'll provide a default
+const registryDocHandle = bootstrap("registryKey", (doc) => repo.find(PRECOOKED_REGISTRY_DOC_ID))
+const bootstrapDocHandle = bootstrap("bootstrapKey", (doc) => repo.find(PRECOOKED_BOOTSTRAP_DOC_ID))
 
-console.log("Now we add the import map found in the automerge doc.")
-importShim.addImportMap(handle.doc.importMap)
+const rDoc = await registryDocHandle.value()
+const bDoc = await bootstrapDocHandle.value()
+
+console.log("Registry Doc ID:", registryDocHandle.documentId, rDoc)
+console.log("Bootstrap Doc ID:", bootstrapDocHandle.documentId, bDoc)
+
+// temporary hack to make the bootstrap doc available to the existing code
+window.BOOTSTRAP_DOC_ID = bootstrapDocHandle.documentId
+
+const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
+registry.installFetch()
+
+window.esmsInitOptions = {
+  shimMode: true,
+  mapOverrides: true,
+  fetch: window.fetch,
+}
+window.process = { env: {}, versions: {} }
+await import("./es-module-shims@1.7.3.js")
+
+// To bootstrap the system from scratch, we need to make sure our initial
+// registry has the dependencies for the bootstrap program.
+// We'll manually record it here (versions don't matter, at least for now):
+
+// registry.linkPackage("@trail-runner/bootstrap", "0.0.1", `${PRECOOKED_BOOTSTRAP_DOC_ID}`)
+// await registry.update("@trail-runner/content-type-raw")
+
+console.log("now installing against local package listing")
+const generator = (window.generator = new Generator({
+  resolutions: { "@automerge/automerge-wasm": "./web/" },
+  defaultProvider: "automerge",
+  customProviders: {
+    automerge: registry.jspmProvider(),
+  },
+}))
+
+console.log("installing bootstrap")
+await generator.install("@trail-runner/bootstrap") // this should load the package above
+
+// this one should resolve to automerge URLs found in your registry document
+console.log("generated version", generator.getMap())
+importShim.addImportMap(generator.getMap())
+console.log("merged version", importShim.ImportMap)
+
+console.log("loading bootstrap")
+const Bootstrap = await import("@trail-runner/bootstrap")
+console.log("Success!")
