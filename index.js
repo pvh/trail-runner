@@ -32,7 +32,15 @@ function bootstrap(key, initialDocumentFn) {
 const registryDocHandle = bootstrap("registryKey", (doc) => repo.find(PRECOOKED_REGISTRY_DOC_ID))
 const bootstrapDocHandle = bootstrap("bootstrapKey", (doc) => repo.find(PRECOOKED_BOOTSTRAP_DOC_ID))
 
-await registryDocHandle.value()
+const rDoc = await registryDocHandle.value()
+const bDoc = await bootstrapDocHandle.value()
+
+console.log("Registry Doc ID:", registryDocHandle.documentId, rDoc)
+console.log("Bootstrap Doc ID:", bootstrapDocHandle.documentId, bDoc)
+
+// temporary hack to make the bootstrap doc available to the existing code
+window.BOOTSTRAP_DOC_ID = bootstrapDocHandle.documentId
+
 const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
 registry.installFetch()
 
@@ -47,8 +55,9 @@ await import("./es-module-shims@1.7.3.js")
 // To bootstrap the system from scratch, we need to make sure our initial
 // registry has the dependencies for the bootstrap program.
 // We'll manually record it here (versions don't matter, at least for now):
-registry.linkPackage("@trail-runner/bootstrap", "0.0.1", `${PRECOOKED_BOOTSTRAP_DOC_ID}`)
-await registry.update("@trail-runner/bootstrap")
+
+// registry.linkPackage("@trail-runner/bootstrap", "0.0.1", `${PRECOOKED_BOOTSTRAP_DOC_ID}`)
+// await registry.update("@trail-runner/content-type-raw")
 
 console.log("now installing against local package listing")
 const generator = (window.generator = new Generator({
@@ -59,11 +68,14 @@ const generator = (window.generator = new Generator({
   },
 }))
 
+console.log("installing bootstrap")
 await generator.install("@trail-runner/bootstrap") // this should load the package above
 
 // this one should resolve to automerge URLs found in your registry document
-console.log(generator.getMap())
+console.log("generated version", generator.getMap())
 importShim.addImportMap(generator.getMap())
+console.log("merged version", importShim.ImportMap)
 
+console.log("loading bootstrap")
 const Bootstrap = await import("@trail-runner/bootstrap")
-console.log("Success!", Bootstrap)
+console.log("Success!")

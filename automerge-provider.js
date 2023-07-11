@@ -11,16 +11,13 @@ To USE cached packages:
 const generator = new Generator({
   defaultProvider: "automerge",
   customProviders: {
-    automerge: registry.jspmProvider,
+    automerge: registry.jspmProvider(),
   },
 })
 
 To update the cache:
 
-const cachingGenerator = (window.generator = new Generator())
-await cachingGenerator.install("codemirror", "@automerge/automerge")
-
-registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
+registry.update()
 
 */
 
@@ -28,6 +25,7 @@ registry.update(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
 // should these be separate docs?
 // TODO: support layers
 import { Generator } from "@jspm/generator"
+import { SemverRange } from "sver"
 
 const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
 export class AutomergeRegistry {
@@ -42,7 +40,7 @@ export class AutomergeRegistry {
     const cachingGenerator = new Generator({
       resolutions: {
         "@automerge/automerge-wasm": "./web/",
-        [pkgName]: "https://automerge-registry.ca/@trail-runner/bootstrap@0.0.1/",
+        [pkgName]: `https://automerge-registry.ca/${pkgName}@0.0.1/`,
       },
     })
     await cachingGenerator.link(pkgName)
@@ -145,9 +143,18 @@ export class AutomergeRegistry {
         if (!this.myRegistryDocHandle.doc.packages[name])
           throw new Error(`package ${name} not found in registry`)
         const versions = Object.keys(this.myRegistryDocHandle.doc.packages[name])
-        const sver = range.bestMatch(versions, stable)
+        let sver = range.bestMatch(versions, stable)
         if (!sver) {
-          return null
+          sver = new SemverRange("*").bestMatch(versions, stable)
+          if (!sver) {
+            console.log(
+              `${name}: Could not satisfy range ${range.toString()} among ${versions}, giving up!`
+            )
+            return null
+          }
+          console.log(
+            `${name}: Could not satisfy range ${range.toString()} among ${versions}, falling back to ${sver.toString()}`
+          )
         }
         const version = sver.toString()
         return { registry, name, version }
@@ -226,7 +233,6 @@ export class AutomergeRegistry {
           if (fileName === "index") {
             fileName = "index.js"
           }
-          console.log("special handling of index.js", fileName)
         }
 
         const file = fileContents[fileName]
