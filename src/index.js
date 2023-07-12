@@ -4,8 +4,6 @@ import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-loc
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { AutomergeRegistry } from "./automerge-provider.js"
 
-console.timeStamp("Entered index.js")
-
 const PRECOOKED_BOOTSTRAP_DOC_ID = "441f8ea5-c86f-49a7-87f9-9cc60225e15e"
 const PRECOOKED_REGISTRY_DOC_ID = "6b9ae2f8-0629-49d1-a103-f7d4ae2a31e0"
 
@@ -34,16 +32,11 @@ function bootstrap(key, initialDocumentFn) {
 const registryDocHandle = bootstrap("registryKey", (doc) => repo.find(PRECOOKED_REGISTRY_DOC_ID))
 const bootstrapDocHandle = bootstrap("bootstrapKey", (doc) => repo.find(PRECOOKED_BOOTSTRAP_DOC_ID))
 
-const rDoc = await registryDocHandle.value()
-const bDoc = await bootstrapDocHandle.value()
-
-console.timeStamp("Loaded initial documents")
-console.log("Registry Doc ID:", registryDocHandle.documentId, rDoc)
-console.log("Bootstrap Doc ID:", bootstrapDocHandle.documentId, bDoc)
-
 // temporary hack to make the bootstrap doc available to the existing code
 window.BOOTSTRAP_DOC_ID = bootstrapDocHandle.documentId
 
+await registryDocHandle.value()
+// We stash the registry on the window so we can access it from the debugger for convenience and hackery
 const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
 registry.installFetch()
 
@@ -52,18 +45,37 @@ window.esmsInitOptions = {
   mapOverrides: true,
   fetch: window.fetch,
 }
-window.process = { env: {}, versions: {} }
+
+// hack to work around error during eslint import
+if (!window.process) {
+  window.process = {}
+}
+console.log("window.process, before: ", window.process)
+window.process.env = { DEBUG_COLORS: "false" }
+window.process.browser = true
+window.process.versions = {}
+window.process.stderr = {}
+window.process.cwd = () => "."
+console.log("window.process, after: ", window.process)
+
 await import("./es-module-shims@1.7.3.js")
+
+// We'll manually record it here (versions don't matter, at least for now):
+
+/** Remove the close comment to re-run the bootstrapping process and repopulate the registry
+ * eventually, this should move into the module editor. Feel free to do so!
+ * /
 
 // To bootstrap the system from scratch, we need to make sure our initial
 // registry has the dependencies for the bootstrap program.
-// We'll manually record it here (versions don't matter, at least for now):
 
-// registry.linkPackage("@trail-runner/bootstrap", "0.0.1", `${PRECOOKED_BOOTSTRAP_DOC_ID}`)
-// await registry.update("@trail-runner/content-type-raw")
+// This code imports the bootstrap document and its dependencies to the registry
+const packageName = "@trail-runner/bootstrap"
+registry.linkPackage(packageName, "0.0.1", `${PRECOOKED_BOOTSTRAP_DOC_ID}`)
+await registry.update(packageName)
 
-/*
-console.log("now installing against local package listing")
+// This code creates a reusable importMap based on the current registry you have
+// and stores it in the bootstrap document.
 const generator = (window.generator = new Generator({
   resolutions: { "@automerge/automerge-wasm": "./web/" },
   defaultProvider: "automerge",
@@ -71,25 +83,19 @@ const generator = (window.generator = new Generator({
     automerge: registry.jspmProvider(),
   },
 }))
+await generator.install(packageName) // this should load the package above
+bootstrapDocHandle.change((doc) => {
+  doc.importMap = generator.getMap()
+})
+/**/
 
-console.log("installing bootstrap")
-await generator.install("@trail-runner/bootstrap") // this should load the package above
-
-console.timeStamp("Installed bootstrap")
-
-// this one should resolve to automerge URLs found in your registry document
-console.log("generated version", generator.getMap())
-importShim.addImportMap(generator.getMap())
-console.log("merged version", importShim.ImportMap)
-
-*/
-
-if (bDoc.importMap) {
-  importShim.addImportMap(bDoc.importMap)
+const importMap = (await bootstrapDocHandle.value()).importMap
+if (!importMap) {
+  throw new Error("No import map found in bootstrap document! Run the code above.")
 }
 
-console.log("loading bootstrap")
-console.timeStamp("Importing bootstrap")
+console.log("Bootstrapping...")
+// registry.updateImportMap("@trail-runner/bootstrap")
+// (does the below) we could maybe do this in the importShim??? or in fetch?
+importShim.addImportMap(importMap)
 const Bootstrap = await import("@trail-runner/bootstrap")
-console.timeStamp("Imported bootstrap")
-console.log("Success!")

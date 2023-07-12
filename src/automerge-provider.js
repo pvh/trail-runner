@@ -39,8 +39,10 @@ export class AutomergeRegistry {
   async update(pkgName) {
     const cachingGenerator = new Generator({
       resolutions: {
-        "@automerge/automerge-wasm": "./web/",
+        // "@automerge/automerge-wasm": "./web/",
         [pkgName]: `https://automerge-registry.ca/${pkgName}@0.0.1/`,
+        "@trail-runner/content-type-editor": `https://automerge-registry.ca/@trail-runner/content-type-editor@0.0.1/`,
+        "@trail-runner/content-type-raw": `https://automerge-registry.ca/@trail-runner/content-type-raw@0.0.1/`,
       },
     })
     await cachingGenerator.link(pkgName)
@@ -118,6 +120,8 @@ export class AutomergeRegistry {
     const fileContents = {}
     await Promise.all(
       files.map(async (path) => {
+        // We should use a throttled fetch as seen in es-module-shims; guy open to some kind of PR (discuss later)
+        // upstream this bit to JSPM
         const res = await fetch(packageBase + path)
         const file = { contentType: res.headers.get("Content-Type"), contents: await res.text() }
         fileContents[path] = file // WASM / binary data?
