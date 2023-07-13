@@ -111,6 +111,22 @@ export class AutomergeRegistry {
     console.log("registered package", name, version, documentId)
   }
 
+  async findLinkedNames (documentId) {
+    const linkedNames = [];
+
+    const registryDoc = await (this.myRegistryDocHandle.value())
+    for (const [name, versions] of Object.entries(registryDoc.packages)) {
+      // documentIds in registry are prefixed with "automerge:"
+      for (const [version, prefixedDocumentId] of Object.entries(versions)) {
+        if (prefixedDocumentId.endsWith(documentId)) {
+          linkedNames.push({ version, name })
+        }
+      }
+    }
+
+    return linkedNames
+  }
+
   async fetchPackage(packageBase, config) {
     const { name, version, files } = config
     // Note: the canonicalization of `files` comes from
