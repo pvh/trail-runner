@@ -1,5 +1,6 @@
 import { Generator } from "@jspm/generator"
 import { Repo } from "@automerge/automerge-repo"
+import * as Automerge from "@automerge/automerge"
 import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { AutomergeRegistry } from "./automerge-provider.js"
@@ -15,6 +16,7 @@ const repo = new Repo({
 
 // put it on the window to reach it from the fetch command elsewhere (this is a hack)
 window.repo = repo
+window.automerge = Automerge
 
 function bootstrap(key, initialDocumentFn) {
   const docId = localStorage.getItem(key)
