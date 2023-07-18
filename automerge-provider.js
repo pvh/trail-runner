@@ -41,6 +41,7 @@ export class AutomergeRegistry {
       resolutions: {
         // "@automerge/automerge-wasm": "./web/",
         [pkgName]: `https://automerge-registry.ca/${pkgName}@0.0.1/`,
+        "@trail-runner/list-item": `https://automerge-registry.ca/@trail-runner/list-item@0.0.1/`,
         "@trail-runner/content-type-editor": `https://automerge-registry.ca/@trail-runner/content-type-editor@0.0.1/`,
         "@trail-runner/content-type-raw": `https://automerge-registry.ca/@trail-runner/content-type-raw@0.0.1/`,
       },
@@ -111,10 +112,10 @@ export class AutomergeRegistry {
     console.log("registered package", name, version, documentId)
   }
 
-  async findLinkedNames (documentId) {
-    const linkedNames = [];
+  async findLinkedNames(documentId) {
+    const linkedNames = []
 
-    const registryDoc = await (this.myRegistryDocHandle.value())
+    const registryDoc = await this.myRegistryDocHandle.value()
     for (const [name, versions] of Object.entries(registryDoc.packages)) {
       // documentIds in registry are prefixed with "automerge:"
       for (const [version, prefixedDocumentId] of Object.entries(versions)) {
@@ -236,13 +237,17 @@ export class AutomergeRegistry {
         const pkg = await packageHandle.value()
         const { fileContents, ...packageJson } = pkg
 
+        let response
+
         // I should remove this special case
         if (fileName === "package.json") {
-          return new Response(JSON.stringify(packageJson), {
+          response = new Response(JSON.stringify(packageJson), {
             headers: {
               "Content-Type": "application/json",
             },
           })
+          Object.defineProperty(response, "url", { value: url })
+          return response
         }
 
         if (fileName === "index.js") {
@@ -255,16 +260,22 @@ export class AutomergeRegistry {
           }
         }
 
-        const file = fileContents[fileName]
-        if (!file) {
-          return new Response("not found", { status: 404 })
+        if (!fileContents[fileName]) {
+          response = new Response("not found", { status: 404 })
+          Object.defineProperty(response, "url", { value: url })
+          return response
+        } else {
+          const file = fileContents[fileName]
+          response = new Response(file.contents, {
+            headers: {
+              "Content-Type": file.contentType,
+            },
+          })
+          Object.defineProperty(response, "url", { value: url })
+          return response
         }
 
-        return new Response(file.contents, {
-          headers: {
-            "Content-Type": file.contentType,
-          },
-        })
+        throw new Error("unreachable!")
       } catch (e) {
         console.error("my fetch failed", url, e)
         throw e
