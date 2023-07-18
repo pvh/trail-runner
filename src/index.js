@@ -60,7 +60,7 @@ window.process.stderr = {}
 window.process.cwd = () => "."
 console.log("window.process, after: ", window.process)
 
-await import("./es-module-shims@1.7.3.js")
+await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js")
 
 // We'll manually record it here (versions don't matter, at least for now):
 
