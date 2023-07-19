@@ -1,7 +1,7 @@
 import { Generator } from "@jspm/generator"
 import { Repo } from "@automerge/automerge-repo"
 import * as Automerge from "@automerge/automerge"
-import { LocalForageStorageAdapter } from "@automerge/automerge-repo-storage-localforage"
+import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { AutomergeRegistry } from "./automerge-provider.js"
 
@@ -10,7 +10,7 @@ const PRECOOKED_REGISTRY_DOC_ID = "6b9ae2f8-0629-49d1-a103-f7d4ae2a31e0"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
-  storage: new LocalForageStorageAdapter(),
+  storage: new IndexedDBStorageAdapter(),
   network: [new BrowserWebSocketClientAdapter("wss://sync.inkandswitch.com")],
 })
 
