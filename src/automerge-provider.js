@@ -44,6 +44,7 @@ export class AutomergeRegistry {
         "@trail-runner/list-item": `https://automerge-registry.ca/@trail-runner/list-item@0.0.1/`,
         "@trail-runner/content-type-editor": `https://automerge-registry.ca/@trail-runner/content-type-editor@0.0.1/`,
         "@trail-runner/content-type-raw": `https://automerge-registry.ca/@trail-runner/content-type-raw@0.0.1/`,
+        "@trail-runner/git-client": `https://automerge-registry.ca/@trail-runner/git-client@0.0.1/`
       },
     })
     await cachingGenerator.link(pkgName)
