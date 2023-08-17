@@ -116,6 +116,6 @@ importShim.addImportMap(importMap)
 const rootModule = await import(bootstrapPackageName)
 
 if (rootModule.mount) {
-  const params = Object.fromEntries(urlParams.get())
+  const params = Object.fromEntries(urlParams.entries())
   rootModule.mount(document.getElementById("root"), params)
 }
