@@ -64,16 +64,17 @@ export class AutomergeRegistry {
     )
 
     // Next, scopes
-    const results = Object.values(importMap.scopes).map(async (scope) => {
-      await Promise.all(
-        Object.values(scope).map(async (packageEntryPoint) => {
-          const packageBase = await resolver.getPackageBase(packageEntryPoint)
-          return this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
-        })
-      )
-    })
-
-    await Promise.all(results)
+    if (importMap.scopes) {
+      const results = Object.values(importMap.scopes).map(async (scope) => {
+        await Promise.all(
+          Object.values(scope).map(async (packageEntryPoint) => {
+            const packageBase = await resolver.getPackageBase(packageEntryPoint)
+            return this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
+          })
+        )
+      })
+      await Promise.all(results)
+    }
 
     console.log("updated package registry", this.myRegistryDocHandle.doc.packages)
     return
