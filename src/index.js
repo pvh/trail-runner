@@ -4,12 +4,13 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { installFetch } from "./fetcher.js"
 
-const PRECOOKED_REGISTRY_DOC_ID = "automerge:3nYkjreb81mhHyuvjrzWudv9Spbe"
+const PRECOOKED_REGISTRY_DOC_URL = "automerge:3nYkjreb81mhHyuvjrzWudv9Spbe"
 
 const queryString = window.location.search
 const urlParams = new URLSearchParams(queryString)
 
-const BOOTSTRAP_DOC_ID = urlParams.get("bootstrapDocId") ?? "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
+const BOOTSTRAP_DOC_URL =
+  urlParams.get("bootstrapDocUrl") ?? "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
@@ -22,28 +23,30 @@ window.repo = repo
 window.automerge = Automerge
 
 function bootstrap(key, initialDocumentFn) {
-  const docId = localStorage.getItem(key)
-  if (!docId) {
+  const docUrl = localStorage.getItem(key)
+  if (!docUrl) {
     const handle = initialDocumentFn(repo)
-    localStorage.setItem(key, handle.documentId)
+    localStorage.setItem(key, handle.url)
     return handle
   } else {
-    return repo.find(docId)
+    return repo.find(docUrl)
   }
 }
 
 // you can BYO but we'll provide a default
-const registryDocHandle = bootstrap("registryKey", (doc) => repo.find(PRECOOKED_REGISTRY_DOC_ID))
+const registryDocHandle = bootstrap("registryDocUrl", (doc) =>
+  repo.find(PRECOOKED_REGISTRY_DOC_URL)
+)
 installFetch(registryDocHandle)
 
-const bootstrapDocHandle = repo.find(BOOTSTRAP_DOC_ID)
+const bootstrapDocHandle = repo.find(BOOTSTRAP_DOC_URL)
 
 // temporary hack to make the bootstrap doc available to the existing code
-window.BOOTSTRAP_DOC_ID = bootstrapDocHandle.documentId
+window.BOOTSTRAP_DOC_URL = bootstrapDocHandle.url
 
 // todo: allow to bootstrap documents that are not in the registry
 /*
-const names = await registry.findLinkedNames(BOOTSTRAP_DOC_ID)
+const names = await registry.findLinkedNames(BOOTSTRAP_DOC_URL)
 if (names.length === 0) {
   throw new Error("Can't bootstrap document because it has no entry in the package registry")
 }
@@ -81,7 +84,7 @@ await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.
  // registry has the dependencies for the bootstrap program.
 
  // This code imports the bootstrap document and its dependencies to the registry
- registry.linkPackage(bootstrapPackageName, "0.0.1", `${BOOTSTRAP_DOC_ID}`)
+ registry.linkPackage(bootstrapPackageName, "0.0.1", `${BOOTSTRAP_DOC_URL}`)
  await registry.update(bootstrapPackageName)
 
  // This code creates a reusable importMap based on the current registry you have
@@ -102,7 +105,11 @@ await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.
 })
  /**/
 
-const importMap = (await bootstrapDocHandle.doc()).importMap
+const bootstrapDoc = await bootstrapDocHandle.doc()
+console.log({ bootstrapDoc })
+
+const importMap = bootstrapDoc.importMap
+
 if (!importMap) {
   throw new Error("No import map found in bootstrap document! Run the code above.")
 }
