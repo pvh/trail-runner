@@ -19,9 +19,9 @@
   <script type="importmap-shim">
     {
       "imports": {
-        "@automerge/automerge-repo": "https://cdn.jsdelivr.net/npm/@automerge/automerge-repo@0.2.1/dist/index.js",
-        "@automerge/automerge-repo-network-websocket": "https://cdn.jsdelivr.net/npm/@automerge/automerge-repo-network-websocket@0.2.1/dist/index.js",
-        "@automerge/automerge-repo-storage-indexeddb": "https://cdn.jsdelivr.net/npm/@automerge/automerge-repo-storage-indexeddb@0.2.1/dist/index.js",
+        "@automerge/automerge-repo": "https://cdn.jsdelivr.net/npm/@automerge/automerge-repo@1.0.1/dist/index.js",
+        "@automerge/automerge-repo-network-websocket": "https://cdn.jsdelivr.net/npm/@automerge/automerge-repo-network-websocket@1.0.1/dist/index.js",
+        "@automerge/automerge-repo-storage-indexeddb": "https://cdn.jsdelivr.net/npm/@automerge/automerge-repo-storage-indexeddb@1.0.1/dist/index.js",
         "fast-sha256": "https://ga.jspm.io/npm:fast-sha256@1.3.0/sha256.js",
         "@jspm/generator": "https://ga.jspm.io/npm:@jspm/generator@1.1.10/dist/generator.js",
         "@jspm/import-map": "https://ga.jspm.io/npm:@jspm/import-map@1.0.7/dist/map.js",
@@ -31,7 +31,8 @@
         "#lib/transform-file.js": "https://ga.jspm.io/npm:@babel/core@7.22.8/lib/transform-file-browser.js",
         "#node.js": "https://ga.jspm.io/npm:browserslist@4.21.9/browser.js",
         "@ampproject/remapping": "https://ga.jspm.io/npm:@ampproject/remapping@2.2.1/dist/remapping.umd.js",
-        "@automerge/automerge": "https://ga.jspm.io/npm:@automerge/automerge@2.1.0-alpha.8/dist/mjs/index.js",
+        "@automerge/automerge": "https://cdn.jsdelivr.net/npm/@automerge/automerge@2.1.0/dist/mjs/index.js",
+        "@automerge/automerge/next": "https://cdn.jsdelivr.net/npm/@automerge/automerge@2.1.0/dist/mjs/next.js",
         "@automerge/automerge-wasm": "./web/index.js",
         "@babel/code-frame": "https://ga.jspm.io/npm:@babel/code-frame@7.22.6/lib/index.js",
         "@babel/compat-data/native-modules": "https://ga.jspm.io/npm:@babel/compat-data@7.22.6/native-modules.js",
@@ -85,6 +86,7 @@
         "ansi-styles": "https://ga.jspm.io/npm:ansi-styles@3.2.1/index.js",
         "assert": "https://ga.jspm.io/npm:@jspm/core@2.0.1/nodelibs/browser/assert.js",
         "browserslist": "https://ga.jspm.io/npm:browserslist@4.21.9/index.js",
+        "bs58check": "https://ga.jspm.io/npm:bs58check@3.0.1/index.js",
         "buffer": "https://ga.jspm.io/npm:@jspm/core@2.0.1/nodelibs/browser/buffer.js",
         "caniuse-lite/dist/unpacker/agents": "https://ga.jspm.io/npm:caniuse-lite@1.0.30001510/dist/unpacker/agents.js",
         "cbor-x": "https://ga.jspm.io/npm:cbor-x@1.5.3/index.js",
@@ -125,11 +127,17 @@
         "yallist": "https://ga.jspm.io/npm:yallist@3.1.1/yallist.js"
       },
       "scopes": {
-        "https://ga.jspm.io/npm:@automerge/automerge@2.1.0-alpha.8/": {
+        "https://cdn.jsdelivr.net/npm/@automerge/automerge@2.1.0/": {
           "uuid": "https://ga.jspm.io/npm:uuid@9.0.0/dist/esm-browser/index.js"
         },
         "https://ga.jspm.io/npm:@jridgewell/trace-mapping@0.3.18/": {
           "@jridgewell/sourcemap-codec": "https://ga.jspm.io/npm:@jridgewell/sourcemap-codec@1.4.14/dist/sourcemap-codec.umd.js"
+        },
+        "https://ga.jspm.io/": {
+          "@noble/hashes/crypto": "https://ga.jspm.io/npm:@noble/hashes@1.3.2/crypto.js",
+          "@noble/hashes/sha256": "https://ga.jspm.io/npm:@noble/hashes@1.3.2/sha256.js",
+          "base-x": "https://ga.jspm.io/npm:base-x@4.0.0/src/index.js",
+          "bs58": "https://ga.jspm.io/npm:bs58@5.0.0/index.js"
         }
       }
     }
