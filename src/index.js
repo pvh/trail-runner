@@ -4,12 +4,12 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { installFetch } from "./fetcher.js"
 
-const PRECOOKED_REGISTRY_DOC_ID = "6b9ae2f8-0629-49d1-a103-f7d4ae2a31e0"
+const PRECOOKED_REGISTRY_DOC_ID = "automerge:3nYkjreb81mhHyuvjrzWudv9Spbe"
 
 const queryString = window.location.search
 const urlParams = new URLSearchParams(queryString)
 
-const BOOTSTRAP_DOC_ID = urlParams.get("bootstrapDocId") ?? "441f8ea5-c86f-49a7-87f9-9cc60225e15e"
+const BOOTSTRAP_DOC_ID = urlParams.get("bootstrapDocId") ?? "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
