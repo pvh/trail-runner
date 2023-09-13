@@ -5,12 +5,7 @@ import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network
 import { installFetch } from "./fetcher.js"
 
 const PRECOOKED_REGISTRY_DOC_URL = "automerge:3nYkjreb81mhHyuvjrzWudv9Spbe"
-
-const queryString = window.location.search
-const urlParams = new URLSearchParams(queryString)
-
-const BOOTSTRAP_DOC_URL =
-  urlParams.get("bootstrapDocUrl") ?? "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
+const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
@@ -18,7 +13,7 @@ const repo = new Repo({
   network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
 })
 
-// put it on the window to reach it from the fetch command elsewhere (this is a hack)
+// put it on the window to reach it from the fetch command elsewhere (just for convenience)
 window.repo = repo
 window.automerge = Automerge
 
@@ -39,91 +34,45 @@ const registryDocHandle = bootstrap("registryDocUrl", (doc) =>
 )
 installFetch(registryDocHandle)
 
-const bootstrapDocHandle = repo.find(BOOTSTRAP_DOC_URL)
-
-// temporary hack to make the bootstrap doc available to the existing code
-window.BOOTSTRAP_DOC_URL = bootstrapDocHandle.url
-
-// todo: allow to bootstrap documents that are not in the registry
-/*
-const names = await registry.findLinkedNames(BOOTSTRAP_DOC_URL)
-if (names.length === 0) {
-  throw new Error("Can't bootstrap document because it has no entry in the package registry")
-}
-
-const bootstrapPackageName = names[0].name
-*/
-
 window.esmsInitOptions = {
   shimMode: true,
   mapOverrides: true,
   fetch: window.fetch,
 }
 
-// hack to work around error during eslint import
-if (!window.process) {
-  window.process = {}
-}
-console.log("window.process, before: ", window.process)
-window.process.env = { DEBUG_COLORS: "false" }
-window.process.browser = true
-window.process.versions = {}
-window.process.stderr = {}
-window.process.cwd = () => "."
-console.log("window.process, after: ", window.process)
-
-await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js")
-
-// We'll manually record it here (versions don't matter, at least for now):
-
-/** Remove the close comment to re-run the bootstrapping process and repopulate the registry
- * eventually, this should move into the module editor. Feel free to do so!
- * /
-
- // To bootstrap the system from scratch, we need to make sure our initial
- // registry has the dependencies for the bootstrap program.
-
- // This code imports the bootstrap document and its dependencies to the registry
- registry.linkPackage(bootstrapPackageName, "0.0.1", `${BOOTSTRAP_DOC_URL}`)
- await registry.update(bootstrapPackageName)
-
- // This code creates a reusable importMap based on the current registry you have
- // and stores it in the bootstrap document.
- const generator = (window.generator = new Generator({
-  resolutions: { "@automerge/automerge-wasm": "./web/" },
-  defaultProvider: "automerge",
-  customProviders: {
-    automerge: registry.jspmProvider(),
-  },
-}))
-
- console.log("load", bootstrapPackageName)
-
- await generator.install(bootstrapPackageName) // this should load the package above
- bootstrapDocHandle.change((doc) => {
-  doc.importMap = generator.getMap()
-})
- /**/
-
-const bootstrapDoc = await bootstrapDocHandle.doc()
-const registryDoc = await registryDocHandle.doc()
-console.log({ bootstrapDoc, registryDoc })
-
-const importMap = bootstrapDoc.importMap
-
-if (!importMap) {
-  throw new Error("No import map found in bootstrap document! Run the code above.")
+// We establish a faux window.process object to improve support for
+// some packages that test for a node environment but don't actually require one.
+window.process = {
+  env: { DEBUG_COLORS: "false" },
+  browser: true,
+  versions: {},
+  stderr: {},
+  cwd: () => ".",
 }
 
 console.log("Bootstrapping...")
-// registry.updateImportMap("@trail-runner/bootstrap")
-// (does the below) we could maybe do this in the importShim??? or in fetch?
-importShim.addImportMap(importMap)
-const rootModule = await import("@trail-runner/bootstrap")
+const bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
+  repo.find(PRECOOKED_BOOTSTRAP_DOC_URL)
+)
 
-console.log(rootModule)
+// Uncomment this if you want to regenerate the bootstrap document import map
+// const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
+// await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
+
+const { importMap, name } = await bootstrapDocHandle.doc()
+if (!importMap || !name) {
+  throw new Error("Essential data missing from bootstrap document")
+}
+
+await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js")
+
+importShim.addImportMap(importMap)
+const rootModule = await import(name)
 
 if (rootModule.mount) {
+  const urlParams = new URLSearchParams(window.location.search)
   const params = Object.fromEntries(urlParams.entries())
   rootModule.mount(document.getElementById("root"), params)
+} else {
+  console.error("Root module doesn't export a mount function", rootModule)
 }

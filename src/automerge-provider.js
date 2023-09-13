@@ -21,22 +21,13 @@ registry.update()
 
 */
 
-
-// a little convenience function, since canParse isn't in standard
-#parseUrl(url) {
-  try {
-    return new URL(url)
-  } catch (e) {
-    return null
-  }
-}
-
 // TODO: support different registries: we should separate native from npm
 // should these be separate docs?
 // TODO: support layers
 import { Generator } from "@jspm/generator"
 import { SemverRange } from "sver"
 
+const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
 
 export class AutomergeRegistry {
   automergeRepo
@@ -47,6 +38,8 @@ export class AutomergeRegistry {
   }
 
   async update(pkgName) {
+    // TODO: These package names are here because they're not found in NPM but we want to be able to resolve them
+    // This is a nasty hack but we can ignore it for a little while.
     const cachingGenerator = new Generator({
       resolutions: {
         // "@automerge/automerge-wasm": "./web/",
@@ -86,7 +79,7 @@ export class AutomergeRegistry {
       await Promise.all(results)
     }
 
-    console.log("updated package registry", this.myRegistryDocHandle.doc.packages)
+    console.log("updated package registry", this.myRegistryDocHandle.docSync().packages)
     return
   }
 
@@ -98,7 +91,7 @@ export class AutomergeRegistry {
     if (!version) throw new Error("no version in package config")
     if (!files) throw new Error("no files in package config")
 
-    const value = await this.myRegistryDocHandle.value()
+    const value = await this.myRegistryDocHandle.doc()
     if (value.packages[name] && value.packages[name][version]) {
       console.log("already have this package", name, version)
       return
@@ -108,11 +101,10 @@ export class AutomergeRegistry {
     const pkg = await this.fetchPackage(packageBase, config)
     console.log("fetched package", name, version)
 
-    this.linkPackage(name, version, pkg.documentId)
+    this.linkPackage(name, version, pkg.url)
   }
 
-  linkPackage(name, version, documentId) {
-    const packageUrl = "automerge:" + documentId
+  linkPackage(name, version, packageUrl) {
     this.myRegistryDocHandle.change((doc) => {
       if (!doc.packages[name]) {
         doc.packages[name] = {}
@@ -121,17 +113,16 @@ export class AutomergeRegistry {
         doc.packages[name][version] = packageUrl
       }
     })
-    console.log("registered package", name, version, documentId)
+    console.log("registered package", name, version, packageUrl)
   }
 
-  async findLinkedNames(documentId) {
+  async findLinkedNames(documentUrl) {
     const linkedNames = []
 
-    const registryDoc = await this.myRegistryDocHandle.value()
+    const registryDoc = await this.myRegistryDocHandle.doc()
     for (const [name, versions] of Object.entries(registryDoc.packages)) {
-      // documentIds in registry are prefixed with "automerge:"
-      for (const [version, prefixedDocumentId] of Object.entries(versions)) {
-        if (prefixedDocumentId.endsWith(documentId)) {
+      for (const [version, versionUrl] of Object.entries(versions)) {
+        if (documentUrl == versionUrl) {
           linkedNames.push({ version, name })
         }
       }
@@ -164,7 +155,7 @@ export class AutomergeRegistry {
       doc.fileContents = fileContents
     })
 
-    console.log("cached package", name, version, handle.documentId, handle.doc)
+    console.log("cached package", name, version, handle.url, handle.doc)
     return handle
   }
 
@@ -173,9 +164,9 @@ export class AutomergeRegistry {
       // called as resolveLatestTarget.bind(generator)
       resolveLatestTarget: async (target, layer, parentUrl) => {
         const { registry, name, range, stable } = target
-        if (!this.myRegistryDocHandle.doc.packages[name])
-          throw new Error(`package ${name} not found in registry`)
-        const versions = Object.keys(this.myRegistryDocHandle.doc.packages[name])
+        const doc = this.myRegistryDocHandle.docSync()
+        if (!doc.packages[name]) throw new Error(`package ${name} not found in registry`)
+        const versions = Object.keys(doc.packages[name])
         let sver = range.bestMatch(versions, stable)
         if (!sver) {
           sver = new SemverRange("*").bestMatch(versions, stable)
