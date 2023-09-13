@@ -1,5 +1,13 @@
 const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
 
+function parseUrl(url) {
+  try {
+    return new URL(url)
+  } catch (e) {
+    return null
+  }
+}
+
 // I should set up a guard to make sure we don't use the jspmProvider until
 // we're prepared to actually resolve packages via this fetch.
 export function installFetch(myRegistryDocHandle) {
@@ -16,11 +24,12 @@ export function installFetch(myRegistryDocHandle) {
       const REPO_PATH_REGEX = /^\/(?<name>.+)@(?<version>[^/]*)\/(?<fileName>.*)$/
       let { name, version, layer, fileName } = parsedUrl.pathname.match(REPO_PATH_REGEX).groups
 
-      const registry = await myRegistryDocHandle.value()
-      const packageDocumentId = registry.packages[name][version].split(":")[1]
+      const registry = await myRegistryDocHandle.doc()
+      const packageDocumentUrl = registry.packages[name][version]
 
-      const packageHandle = repo.find(packageDocumentId)
-      const pkg = await packageHandle.value()
+      const packageHandle = repo.find(packageDocumentUrl)
+      const pkg = await packageHandle.doc()
+
       const { fileContents, ...packageJson } = pkg
 
       let response
