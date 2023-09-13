@@ -106,7 +106,8 @@ await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.
  /**/
 
 const bootstrapDoc = await bootstrapDocHandle.doc()
-console.log({ bootstrapDoc })
+const registryDoc = await registryDocHandle.doc()
+console.log({ bootstrapDoc, registryDoc })
 
 const importMap = bootstrapDoc.importMap
 
