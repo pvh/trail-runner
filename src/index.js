@@ -1,14 +1,13 @@
-import { Generator } from "@jspm/generator"
 import { Repo } from "@automerge/automerge-repo"
 import * as Automerge from "@automerge/automerge"
-import {IndexedDBStorageAdapter} from "@automerge/automerge-repo-storage-indexeddb"
-import {BrowserWebSocketClientAdapter} from "@automerge/automerge-repo-network-websocket"
-import {AutomergeRegistry} from "./automerge-provider.js"
+import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
+import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
+import { installFetch } from "./fetcher.js"
 
 const PRECOOKED_REGISTRY_DOC_ID = "6b9ae2f8-0629-49d1-a103-f7d4ae2a31e0"
 
-const queryString = window.location.search;
-const urlParams = new URLSearchParams(queryString);
+const queryString = window.location.search
+const urlParams = new URLSearchParams(queryString)
 
 const BOOTSTRAP_DOC_ID = urlParams.get("bootstrapDocId") ?? "441f8ea5-c86f-49a7-87f9-9cc60225e15e"
 
@@ -35,23 +34,22 @@ function bootstrap(key, initialDocumentFn) {
 
 // you can BYO but we'll provide a default
 const registryDocHandle = bootstrap("registryKey", (doc) => repo.find(PRECOOKED_REGISTRY_DOC_ID))
+installFetch(registryDocHandle)
+
 const bootstrapDocHandle = repo.find(BOOTSTRAP_DOC_ID)
 
 // temporary hack to make the bootstrap doc available to the existing code
 window.BOOTSTRAP_DOC_ID = bootstrapDocHandle.documentId
 
-await registryDocHandle.value()
-// We stash the registry on the window so we can access it from the debugger for convenience and hackery
-const registry = (window.registry = new AutomergeRegistry(repo, registryDocHandle))
-registry.installFetch()
-
 // todo: allow to bootstrap documents that are not in the registry
+/*
 const names = await registry.findLinkedNames(BOOTSTRAP_DOC_ID)
 if (names.length === 0) {
   throw new Error("Can't bootstrap document because it has no entry in the package registry")
 }
 
 const bootstrapPackageName = names[0].name
+*/
 
 window.esmsInitOptions = {
   shimMode: true,
@@ -64,7 +62,7 @@ if (!window.process) {
   window.process = {}
 }
 console.log("window.process, before: ", window.process)
-window.process.env = {DEBUG_COLORS: "false"}
+window.process.env = { DEBUG_COLORS: "false" }
 window.process.browser = true
 window.process.versions = {}
 window.process.stderr = {}
@@ -113,7 +111,7 @@ console.log("Bootstrapping...")
 // registry.updateImportMap("@trail-runner/bootstrap")
 // (does the below) we could maybe do this in the importShim??? or in fetch?
 importShim.addImportMap(importMap)
-const rootModule = await import(bootstrapPackageName)
+// const rootModule = await import("@trail-runner/bootstrap")
 
 if (rootModule.mount) {
   const params = Object.fromEntries(urlParams.entries())

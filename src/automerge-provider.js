@@ -21,13 +21,23 @@ registry.update()
 
 */
 
+
+// a little convenience function, since canParse isn't in standard
+#parseUrl(url) {
+  try {
+    return new URL(url)
+  } catch (e) {
+    return null
+  }
+}
+
 // TODO: support different registries: we should separate native from npm
 // should these be separate docs?
 // TODO: support layers
 import { Generator } from "@jspm/generator"
 import { SemverRange } from "sver"
 
-const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
+
 export class AutomergeRegistry {
   automergeRepo
   myRegistryDocHandle
@@ -44,7 +54,7 @@ export class AutomergeRegistry {
         "@trail-runner/list-item": `https://automerge-registry.ca/@trail-runner/list-item@0.0.1/`,
         "@trail-runner/content-type-editor": `https://automerge-registry.ca/@trail-runner/content-type-editor@0.0.1/`,
         "@trail-runner/content-type-raw": `https://automerge-registry.ca/@trail-runner/content-type-raw@0.0.1/`,
-        "@trail-runner/git-client": `https://automerge-registry.ca/@trail-runner/git-client@0.0.1/`
+        "@trail-runner/git-client": `https://automerge-registry.ca/@trail-runner/git-client@0.0.1/`,
       },
     })
     await cachingGenerator.link(pkgName)
@@ -207,82 +217,5 @@ export class AutomergeRegistry {
       },*/
       supportedLayers: ["*"], // ???
     }
-  }
-
-  // a little convenience function, since canParse isn't in standard
-  #parseUrl(url) {
-    try {
-      return new URL(url)
-    } catch (e) {
-      return null
-    }
-  }
-
-  // I should set up a guard to make sure we don't use the jspmProvider until
-  // we're prepared to actually resolve packages via this fetch.
-  installFetch() {
-    const previousFetch = window.fetch
-    const myFetch = async (url, options) => {
-      try {
-        if (!url.startsWith(AUTOMERGE_REGISTRY_PREFIX)) {
-          return previousFetch(url, options)
-        }
-
-        const parsedUrl = this.#parseUrl(url)
-        const REPO_PATH_REGEX = /^\/(?<name>.+)@(?<version>[^/]*)\/(?<fileName>.*)$/
-        let { name, version, layer, fileName } = parsedUrl.pathname.match(REPO_PATH_REGEX).groups
-
-        const registry = await this.myRegistryDocHandle.value()
-        const packageDocumentId = registry.packages[name][version].split(":")[1]
-
-        const packageHandle = repo.find(packageDocumentId)
-        const pkg = await packageHandle.value()
-        const { fileContents, ...packageJson } = pkg
-
-        let response
-
-        // I should remove this special case
-        if (fileName === "package.json") {
-          response = new Response(JSON.stringify(packageJson), {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          })
-          Object.defineProperty(response, "url", { value: url })
-          return response
-        }
-
-        if (fileName === "index.js") {
-          // Uhhhh, guy, is ths right? this seems wrong.
-          fileName = packageJson["module"] || packageJson["main"] || "index.js"
-          fileName = fileName.replace(/^\.\//, "") // or main?
-          // zeit/ms has a package.json with "main": "./index"
-          if (fileName === "index") {
-            fileName = "index.js"
-          }
-        }
-
-        if (!fileContents[fileName]) {
-          response = new Response("not found", { status: 404 })
-          Object.defineProperty(response, "url", { value: url })
-          return response
-        } else {
-          const file = fileContents[fileName]
-          response = new Response(file.contents, {
-            headers: {
-              "Content-Type": file.contentType,
-            },
-          })
-          Object.defineProperty(response, "url", { value: url })
-          return response
-        }
-
-        throw new Error("unreachable!")
-      } catch (e) {
-        console.error("my fetch failed", url, e)
-        throw e
-      }
-    }
-    window.fetch = myFetch
   }
 }
