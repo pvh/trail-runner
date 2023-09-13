@@ -14,7 +14,7 @@ const BOOTSTRAP_DOC_ID = urlParams.get("bootstrapDocId") ?? "441f8ea5-c86f-49a7-
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
   storage: new IndexedDBStorageAdapter(),
-  network: [new BrowserWebSocketClientAdapter("wss://sync.inkandswitch.com")],
+  network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
 })
 
 // put it on the window to reach it from the fetch command elsewhere (this is a hack)
@@ -102,7 +102,7 @@ await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.
 })
  /**/
 
-const importMap = (await bootstrapDocHandle.value()).importMap
+const importMap = (await bootstrapDocHandle.doc()).importMap
 if (!importMap) {
   throw new Error("No import map found in bootstrap document! Run the code above.")
 }
@@ -111,7 +111,9 @@ console.log("Bootstrapping...")
 // registry.updateImportMap("@trail-runner/bootstrap")
 // (does the below) we could maybe do this in the importShim??? or in fetch?
 importShim.addImportMap(importMap)
-// const rootModule = await import("@trail-runner/bootstrap")
+const rootModule = await import("@trail-runner/bootstrap")
+
+console.log(rootModule)
 
 if (rootModule.mount) {
   const params = Object.fromEntries(urlParams.entries())
