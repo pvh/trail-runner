@@ -4,8 +4,9 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { installFetch } from "./fetcher.js"
 
-const PRECOOKED_REGISTRY_DOC_URL = "automerge:3nYkjreb81mhHyuvjrzWudv9Spbe"
-const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
+// These defaults can be overridden by URL params or local storage
+const DEFAULT_REGISTRY_DOC_URL = "automerge:ikuoVN5kybWiat872eth6YYPxK1"
+const DEFAULT_BOOTSTRAP_DOC_URL = "automerge:2CNizLVpeoeju8skTpG94qRGrD4W"
 
 // Step one: Set up an automerge-repo.
 const repo = new Repo({
@@ -29,9 +30,7 @@ function bootstrap(key, initialDocumentFn) {
 }
 
 // you can BYO but we'll provide a default
-const registryDocHandle = bootstrap("registryDocUrl", (doc) =>
-  repo.find(PRECOOKED_REGISTRY_DOC_URL)
-)
+const registryDocHandle = bootstrap("registryDocUrl", (doc) => repo.find(DEFAULT_REGISTRY_DOC_URL))
 installFetch(registryDocHandle)
 
 window.esmsInitOptions = {
@@ -52,7 +51,7 @@ window.process = {
 
 console.log("Bootstrapping...")
 const bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
-  repo.find(PRECOOKED_BOOTSTRAP_DOC_URL)
+  repo.find(DEFAULT_BOOTSTRAP_DOC_URL)
 )
 
 // Uncomment this if you want to regenerate the bootstrap document import map
