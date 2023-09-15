@@ -26,6 +26,7 @@ registry.update()
 // TODO: support layers
 import { Generator } from "@jspm/generator"
 import { SemverRange } from "sver"
+import { next as Automerge } from "@automerge/automerge"
 
 const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
 
@@ -143,7 +144,10 @@ export class AutomergeRegistry {
         // We should use a throttled fetch as seen in es-module-shims; guy open to some kind of PR (discuss later)
         // upstream this bit to JSPM
         const res = await fetch(packageBase + path)
-        const file = { contentType: res.headers.get("Content-Type"), contents: await res.text() }
+        const file = {
+          contentType: res.headers.get("Content-Type"),
+          contents: new Automerge.RawString(await res.text()),
+        }
         fileContents[path] = file // WASM / binary data?
       })
     )

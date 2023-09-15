@@ -4,7 +4,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { installFetch } from "./fetcher.js"
 
-const PRECOOKED_REGISTRY_DOC_URL = "automerge:3nYkjreb81mhHyuvjrzWudv9Spbe"
+const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
 // Step one: Set up an automerge-repo.
@@ -56,8 +56,8 @@ const bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
 )
 
 // Uncomment this if you want to regenerate the bootstrap document import map
-// const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
-// await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
+const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
+await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
 
 const { importMap, name } = await bootstrapDocHandle.doc()
 if (!importMap || !name) {
