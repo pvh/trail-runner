@@ -1,17 +1,61 @@
 import { Repo } from "@automerge/automerge-repo"
 import * as Automerge from "@automerge/automerge"
-import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
-import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
+import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 import { installFetch } from "./fetcher.js"
+
+import MySharedWorker from "./shared-worker.js?sharedworker"
 
 const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
 // Step one: Set up an automerge-repo.
-const repo = new Repo({
-  storage: new IndexedDBStorageAdapter(),
-  network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
-})
+async function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register(
+        "/service-worker.js" // TODO: path fix
+      )
+    } catch (error) {
+      console.error(`sw: Registration failed with ${error}`)
+    }
+  }
+}
+
+function registerSharedWorker() {
+  let worker = MySharedWorker()
+  return worker
+}
+
+async function introduceWorkers(sharedWorker) {
+  const reg = await navigator.serviceWorker.ready
+  if (!reg.active) {
+    throw new Error("ServiceWorker not loaded.")
+  }
+  /* introduce the SharedWorker and the ServiceWorker. */
+  console.log("ServiceWorker is ready.")
+  const channel = new MessageChannel()
+  reg.active.postMessage({ sharedWorkerPort: channel.port1 }, [channel.port1])
+  sharedWorker.port.postMessage({ serviceWorkerPort: channel.port2 }, [channel.port2])
+  console.log("Introduced shared & service worker to one another.")
+}
+
+function setupSharedWorkerAndRepo() {
+  const repoNetworkChannel = new MessageChannel()
+  sharedWorker.port.postMessage({ repoNetworkPort: repoNetworkChannel.port2 }, [
+    repoNetworkChannel.port2,
+  ])
+  const repo = new Repo({
+    network: [new MessageChannelNetworkAdapter(repoNetworkChannel.port1)],
+    sharePolicy: async (peerId) => peerId.includes("shared-worker"),
+  })
+  return repo
+}
+
+registerServiceWorker()
+const sharedWorker = registerSharedWorker()
+
+introduceWorkers(sharedWorker)
+const repo = setupSharedWorkerAndRepo()
 
 // put it on the window to reach it from the fetch command elsewhere (just for convenience)
 window.repo = repo
@@ -56,9 +100,9 @@ const bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
 )
 
 // Uncomment this if you want to regenerate the bootstrap document import map
-const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
-await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
-
+// const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
+// await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
+console.log(await bootstrapDocHandle.doc())
 const { importMap, name } = await bootstrapDocHandle.doc()
 if (!importMap || !name) {
   throw new Error("Essential data missing from bootstrap document")
