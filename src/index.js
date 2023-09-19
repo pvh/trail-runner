@@ -108,10 +108,10 @@ if (!importMap || !name) {
   throw new Error("Essential data missing from bootstrap document")
 }
 
-await import("https://ga.jspm.io/npm:es-module-shims@1.8.0/dist/es-module-shims.js")
+await import("./vendor/es-module-shims@1.7.3.js")
 
 importShim.addImportMap(importMap)
-const rootModule = await import(name)
+const rootModule = await importShim(name)
 
 if (rootModule.mount) {
   const urlParams = new URLSearchParams(window.location.search)

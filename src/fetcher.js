@@ -27,9 +27,12 @@ export function installFetch(myRegistryDocHandle) {
       const registry = await myRegistryDocHandle.doc()
       const packageDocumentUrl = registry.packages[name][version]
 
+      console.log({ name, version, packageDocumentUrl })
+
       const packageHandle = repo.find(packageDocumentUrl)
       const pkg = await packageHandle.doc()
 
+      console.log({ pkg, fileName })
       const { fileContents, ...packageJson } = pkg
 
       let response
