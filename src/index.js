@@ -108,7 +108,7 @@ if (!importMap || !name) {
   throw new Error("Essential data missing from bootstrap document")
 }
 
-await import("./vendor/es-module-shims@1.7.3.js")
+await import("./vendor/es-module-shims@1.8.0.js")
 
 importShim.addImportMap(importMap)
 const rootModule = await importShim(name)
