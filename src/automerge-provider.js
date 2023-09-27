@@ -250,7 +250,6 @@ export class AutomergeRegistry {
         throw new Error("not implemented")
         return null
       },*/
-      /*
       async getPackageConfig(pkgUrl) {
         const url = new URL(pkgUrl)
         if (!url.pathname.startsWith("/automerge-repo")) return null
@@ -266,7 +265,7 @@ export class AutomergeRegistry {
               resolve(packageJson)
             })
         })
-      },*/
+      },
       supportedLayers: ["*"], // ???
     }
   }
