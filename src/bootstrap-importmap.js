@@ -19,18 +19,22 @@ export async function generateInitialImportMap(repo, registryDocHandle, targetDo
 
   // This code imports the bootstrap document and its dependencies to the registry
   registry.linkPackage(name, "0.0.1", targetDocHandle.url)
-  await registry.update(name)
+  await registry.update(name, targetDocHandle.url)
 
   // This code creates a reusable importMap based on the current registry you have
   // and stores it in the bootstrap document.
+
   const generator = new Generator({
-    resolutions: { "@automerge/automerge-wasm": "./web/" },
+    resolutions: {
+      "@automerge/automerge-wasm": "./src/web", // Uhhhh
+    },
     defaultProvider: "automerge",
     customProviders: {
       automerge: registry.jspmProvider(),
     },
   })
 
+  console.log(name)
   await generator.install(name) // this should load the package above
 
   console.log("new import map", generator.getMap())

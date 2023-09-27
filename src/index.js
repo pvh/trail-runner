@@ -1,67 +1,33 @@
-import { Repo } from "@automerge/automerge-repo"
 import * as Automerge from "@automerge/automerge"
-import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
-import { installFetch } from "./fetcher.js"
 
-import MySharedWorker from "./shared-worker.js?sharedworker"
-
-const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
-// Step one: Set up an automerge-repo.
-async function registerServiceWorker() {
-  if ("serviceWorker" in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.register(
-        "/service-worker.js" // TODO: path fix
-      )
-    } catch (error) {
-      console.error(`sw: Registration failed with ${error}`)
-    }
-  }
-}
-
-function registerSharedWorker() {
-  let worker = MySharedWorker()
-  return worker
-}
-
-async function introduceWorkers(sharedWorker) {
-  const reg = await navigator.serviceWorker.ready
-  if (!reg.active) {
-    throw new Error("ServiceWorker not loaded.")
-  }
-  /* introduce the SharedWorker and the ServiceWorker. */
-  console.log("ServiceWorker is ready.")
-  const channel = new MessageChannel()
-  reg.active.postMessage({ sharedWorkerPort: channel.port1 }, [channel.port1])
-  sharedWorker.port.postMessage({ serviceWorkerPort: channel.port2 }, [channel.port2])
-  console.log("Introduced shared & service worker to one another.")
-}
-
-function setupSharedWorkerAndRepo() {
-  const repoNetworkChannel = new MessageChannel()
-  sharedWorker.port.postMessage({ repoNetworkPort: repoNetworkChannel.port2 }, [
-    repoNetworkChannel.port2,
-  ])
-  const repo = new Repo({
-    network: [new MessageChannelNetworkAdapter(repoNetworkChannel.port1)],
-    sharePolicy: async (peerId) => peerId.includes("shared-worker"),
+async function setupRepo() {
+  const { Repo } = await import("@automerge/automerge-repo")
+  const { IndexedDBStorageAdapter } = await import("@automerge/automerge-repo-storage-indexeddb")
+  const { BrowserWebSocketClientAdapter } = await import(
+    "@automerge/automerge-repo-network-websocket"
+  )
+  return new Repo({
+    storage: new IndexedDBStorageAdapter(),
+    network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
+    peerId: "shared-worker-" + Math.round(Math.random() * 10000),
+    sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
-  return repo
 }
 
-registerServiceWorker()
-const sharedWorker = registerSharedWorker()
-
-introduceWorkers(sharedWorker)
-const repo = setupSharedWorkerAndRepo()
+const repo = await setupRepo()
 
 // put it on the window to reach it from the fetch command elsewhere (just for convenience)
 window.repo = repo
 window.automerge = Automerge
 
 function bootstrap(key, initialDocumentFn) {
+  const param = new URLSearchParams(window.location.search).get(key)
+  if (param) {
+    return repo.find(param)
+  }
+
   const docUrl = localStorage.getItem(key)
   if (!docUrl) {
     const handle = initialDocumentFn(repo)
@@ -71,12 +37,6 @@ function bootstrap(key, initialDocumentFn) {
     return repo.find(docUrl)
   }
 }
-
-// you can BYO but we'll provide a default
-const registryDocHandle = bootstrap("registryDocUrl", (doc) =>
-  repo.find(PRECOOKED_REGISTRY_DOC_URL)
-)
-installFetch(registryDocHandle)
 
 window.esmsInitOptions = {
   shimMode: true,
@@ -99,11 +59,21 @@ const bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
   repo.find(PRECOOKED_BOOTSTRAP_DOC_URL)
 )
 
-// Uncomment this if you want to regenerate the bootstrap document import map
-// const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
-// await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
+window.bootstrapDocHandle = bootstrapDocHandle
+
 console.log(await bootstrapDocHandle.doc())
-const { importMap, name } = await bootstrapDocHandle.doc()
+let { importMap, name } = await bootstrapDocHandle.doc()
+
+// Uncomment this if you want to regenerate the bootstrap document import map
+if (!importMap) {
+  const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
+  const registryDocHandle = repo.find(PRECOOKED_REGISTRY_DOC_URL)
+  await registryDocHandle.doc()
+  const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
+  await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
+  importMap = bootstrapDocHandle.importMap
+}
+
 if (!importMap || !name) {
   throw new Error("Essential data missing from bootstrap document")
 }

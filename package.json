@@ -4,13 +4,22 @@
   "description": "A prototype import-map loader.",
   "main": "src/index.js",
   "scripts": {
-    "serve": "serve ./src"
+    "dev": "vite dev -l info --port 3000 --force"
   },
   "author": "pvh@pvh.ca",
   "license": "MIT",
   "devDependencies": {
     "jspm": "^3.0.1",
     "prettier": "^2.8.8",
-    "serve": "^14.2.0"
+    "serve": "^14.2.0",
+    "vite": "^4.4.9"
+  },
+  "dependencies": {
+    "@automerge/automerge": "^2.1.2",
+    "@automerge/automerge-repo": "^1.0.2",
+    "@automerge/automerge-repo-network-messagechannel": "^1.0.2",
+    "@automerge/automerge-repo-network-websocket": "^1.0.2",
+    "@automerge/automerge-repo-storage-indexeddb": "^1.0.2",
+    "@automerge/automerge-wasm": "^0.2.14"
   }
 }

@@ -28,29 +28,26 @@ import { Generator } from "@jspm/generator"
 import { SemverRange } from "sver"
 import { next as Automerge } from "@automerge/automerge"
 
-const AUTOMERGE_REGISTRY_PREFIX = "https://automerge-registry.ca/"
-
 export class AutomergeRegistry {
   automergeRepo
   myRegistryDocHandle
   constructor(automergeRepo, myRegistryDocHandle) {
     this.automergeRepo = automergeRepo
     this.myRegistryDocHandle = myRegistryDocHandle
+    window.myRegistryDocHandle = myRegistryDocHandle
   }
 
-  async update(pkgName) {
+  async update(pkgName, pkgUrl) {
     // TODO: These package names are here because they're not found in NPM but we want to be able to resolve them
     // This is a nasty hack but we can ignore it for a little while.
     const cachingGenerator = new Generator({
       resolutions: {
-        // "@automerge/automerge-wasm": "./web/",
-        [pkgName]: `https://automerge-registry.ca/${pkgName}@0.0.1/`,
-        "@trail-runner/list-item": `https://automerge-registry.ca/@trail-runner/list-item@0.0.1/`,
-        "@trail-runner/content-type-editor": `https://automerge-registry.ca/@trail-runner/content-type-editor@0.0.1/`,
-        "@trail-runner/content-type-raw": `https://automerge-registry.ca/@trail-runner/content-type-raw@0.0.1/`,
-        "@trail-runner/git-client": `https://automerge-registry.ca/@trail-runner/git-client@0.0.1/`,
+        [pkgName]: `/automerge-repo/${pkgUrl}`,
+        "@automerge/automerge-wasm": "./src/web", // Uhhhh
       },
     })
+    console.log("before packages", cachingGenerator.getMap())
+    console.log("Linking")
     await cachingGenerator.link(pkgName)
     console.log("prepared packages", cachingGenerator.getMap())
     await this.cacheImportMap(cachingGenerator.getMap(), cachingGenerator.traceMap.resolver)
@@ -59,23 +56,23 @@ export class AutomergeRegistry {
   async cacheImportMap(importMap, resolver) {
     console.log("updating package registry")
 
+    const cachePackage = async (packageEntryPoint) => {
+      const packageBase = await resolver.getPackageBase(packageEntryPoint)
+      const packageConfig = await resolver.getPackageConfig(packageBase)
+      if (packageBase && packageConfig) {
+        await this.cachePackage(packageBase, packageConfig)
+      } else {
+        console.warn("could not cache package", packageBase, packageConfig)
+      }
+    }
+
     // First, direct imports
-    await Promise.all(
-      Object.values(importMap.imports).map(async (packageEntryPoint) => {
-        const packageBase = await resolver.getPackageBase(packageEntryPoint)
-        await this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
-      })
-    )
+    await Promise.all(Object.values(importMap.imports).map(cachePackage))
 
     // Next, scopes
     if (importMap.scopes) {
       const results = Object.values(importMap.scopes).map(async (scope) => {
-        await Promise.all(
-          Object.values(scope).map(async (packageEntryPoint) => {
-            const packageBase = await resolver.getPackageBase(packageEntryPoint)
-            return this.cachePackage(packageBase, await resolver.getPackageConfig(packageBase))
-          })
-        )
+        await Promise.all(Object.values(scope).map(cachePackage))
       })
       await Promise.all(results)
     }
@@ -151,6 +148,7 @@ export class AutomergeRegistry {
         fileContents[path] = file // WASM / binary data?
       })
     )
+
     // if anything fails here, we do indeed want to abort. we're trusting JSPM's files list.
     const handle = this.automergeRepo.create()
     // assign the doc
@@ -187,28 +185,87 @@ export class AutomergeRegistry {
         const version = sver.toString()
         return { registry, name, version }
       },
-      async pkgToUrl(pkg, layer) {
+      async pkgToUrl(pkgPromise, layer) {
+        let pkg = await pkgPromise
+
+        const registryDoc = window.myRegistryDocHandle.docSync()
+
+        if (pkg.pkg) {
+          pkg = pkg.pkg
+        }
         const { registry, name, version } = pkg
-        const url = `${AUTOMERGE_REGISTRY_PREFIX}${name}@${version}/`
-        return url
+
+        if (!name || !version) {
+          console.log(pkg)
+          console.log(registryDoc)
+          throw new Error("pkgToUrl: missing name or version")
+        }
+
+        const docUrl = registryDoc.packages?.[name]?.[version]
+        if (!docUrl) throw new Error(`package ${name} not found in registry`)
+
+        const url = new URL(`/automerge-repo/${docUrl}/`, window.location)
+        return url.toString()
       },
-      parseUrlPkg(url) {
-        if (!url.startsWith(AUTOMERGE_REGISTRY_PREFIX)) return null
-        const regex =
-          /^https:\/\/automerge-registry.ca\/(?<name>.*)@(?<version>[^\/]*)\/(?<subpath>.*)$/
-        const { name, version, subpath } = url.match(regex).groups
-        return { layer: "default", pkg: { registry: "automerge-registry", name, version }, subpath }
+
+      parseUrlPkg(stringUrl) {
+        const url = new URL(stringUrl)
+
+        if (!url.pathname.startsWith("/automerge-repo")) return null
+
+        const regex = /^\/automerge-repo\/(?<docUrl>[^\/]*)\/(?<subpath>.*)$/
+        const { docUrl, subpath } = url.pathname.match(regex).groups
+
+        console.log("parseUrlPkg", stringUrl)
+
+        return new Promise((resolve, reject) => {
+          repo
+            .find(docUrl)
+            .doc()
+            .then((doc) => {
+              const { name, version } = doc
+              console.log("parseUrlPkg", { docUrl, name, version, subpath })
+
+              const result = {
+                layer: "default",
+                pkg: { registry: "automerge-registry", name, version },
+                subpath,
+              }
+
+              /*
+              const result = { registry: "automerge-registry", name, version }
+              console.log("parseUrlPkg RESULT", result)
+              */
+
+              resolve(result)
+            })
+        })
       },
-      ownsUrl(url) {
-        return url.startsWith(AUTOMERGE_REGISTRY_PREFIX)
+
+      ownsUrl(stringUrl) {
+        const url = new URL(stringUrl)
+        return url.pathname.startsWith("/automerge-repo")
       },
       /*resolveBuiltin(specifier, env) {
         throw new Error("not implemented")
         return null
-      },
+      },*/
+      /*
       async getPackageConfig(pkgUrl) {
-        throw new Error("not implemented")
-        return null
+        const url = new URL(pkgUrl)
+        if (!url.pathname.startsWith("/automerge-repo")) return null
+
+        const regex = /^\/automerge-repo\/(?<docUrl>[^\/]*)\/(?<subpath>.*)$/
+        const { docUrl, subpath } = url.pathname.match(regex).groups
+        return new Promise((resolve, reject) => {
+          repo
+            .find(docUrl)
+            .doc()
+            .then((doc) => {
+              const { fileContents, ...packageJson } = doc
+              resolve(packageJson)
+            })
+        })
       },*/
       supportedLayers: ["*"], // ???
     }
