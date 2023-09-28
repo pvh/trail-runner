@@ -4,7 +4,8 @@
   "description": "A prototype import-map loader.",
   "main": "src/index.js",
   "scripts": {
-    "dev": "vite dev -l info --port 3000 --force"
+    "dev": "vite dev --port 3000",
+    "build": "vite build"
   },
   "author": "pvh@pvh.ca",
   "license": "MIT",
