@@ -20,6 +20,6 @@
     "@automerge/automerge-repo-network-messagechannel": "^1.0.2",
     "@automerge/automerge-repo-network-websocket": "^1.0.2",
     "@automerge/automerge-repo-storage-indexeddb": "^1.0.2",
-    "@automerge/automerge-wasm": "^0.2.14"
+    "@automerge/automerge-wasm": "file:./src/vendor/automerge-wasm"
   }
 }
