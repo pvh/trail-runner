@@ -1,6 +1,9 @@
 import { defineConfig } from "vite"
 
 export default {
+  build: {
+    target: 'esnext'
+  },
   plugins: [],
   define: { "process.env": {} },
   optimizeDeps: {
