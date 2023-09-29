@@ -1,4 +1,5 @@
-import * as amWasm from "@automerge/automerge-wasm"
+import * as AutomergeWasm from "@automerge/automerge-wasm"
+import * as Automerge from "@automerge/automerge"
 import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
@@ -21,11 +22,17 @@ const ASSETS_TO_CACHE = [] /*
 ]*/
 
 self.addEventListener("install", (event) => {
-  skipWaiting()
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      cache.addAll(ASSETS_TO_CACHE)
-    })
+    Promise.all([
+      new Promise(async (resolve) => {
+        await AutomergeWasm.promise
+        Automerge.use(AutomergeWasm)
+        resolve()
+      }),
+      caches.open(CACHE_NAME).then((cache) => {
+        cache.addAll(ASSETS_TO_CACHE)
+      }),
+    ])
   )
 })
 
@@ -101,10 +108,3 @@ const repo = new Repo({
   peerId: "shared-worker-" + Math.round(Math.random() * 10000),
   sharePolicy: async (peerId) => peerId.includes("storage-server"),
 })
-
-console.log(amWasm)
-amWasm.promise.then(() => {
-  console.log("WASM LOADED")
-})
-
-console.log("SW repo", repo)

@@ -1,7 +1,7 @@
 import { resolve } from "path"
 import { defineConfig } from "vite"
 
-export default {
+export default defineConfig({
   base: "./",
 
   build: {
@@ -22,4 +22,4 @@ export default {
   },
   plugins: [],
   define: { "process.env": {} },
-}
+})
