@@ -73,7 +73,7 @@ console.log(await bootstrapDocHandle.doc())
 let { importMap, name } = await bootstrapDocHandle.doc()
 
 // Uncomment this if you want to regenerate the bootstrap document import map
-/*
+
 if (!importMap) {
   const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
   const registryDocHandle = repo.find(PRECOOKED_REGISTRY_DOC_URL)

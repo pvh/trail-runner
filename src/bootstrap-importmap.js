@@ -26,7 +26,7 @@ export async function generateInitialImportMap(repo, registryDocHandle, targetDo
 
   const generator = new Generator({
     resolutions: {
-      "@automerge/automerge-wasm": "./src/web", // Uhhhh
+      "@automerge/automerge-wasm": "./src/vendor/automerge-wasm",
     },
     defaultProvider: "automerge",
     customProviders: {

@@ -162,8 +162,8 @@ export class AutomergeRegistry {
     const handle = this.automergeRepo.create()
     // assign the doc
     handle.change((doc) => {
-      Object.entries(fileContents).forEach(([k, v]) => (doc[k] = v))
-      doc.config = config
+      Object.entries(config).forEach(([k, v]) => (doc[k] = v))
+      doc.fileContents = fileContents
     })
 
     console.log("cached package", name, version, handle.url, handle.doc)
@@ -171,6 +171,8 @@ export class AutomergeRegistry {
   }
 
   jspmProvider() {
+    const PACKAGE_REGEX = /^\/automerge-repo\/(?<docUrl>[^\/]*)\/fileContents\/(?<subpath>.*)$/
+
     return {
       // called as resolveLatestTarget.bind(generator)
       resolveLatestTarget: async (target, layer, parentUrl) => {
@@ -195,13 +197,13 @@ export class AutomergeRegistry {
         return { registry, name, version }
       },
       async pkgToUrl(pkgPromise, layer) {
+        /* This business here is a weird pile of hacks that needs to be thought through and eliminated */
         let pkg = await pkgPromise
-
-        const registryDoc = window.myRegistryDocHandle.docSync()
-
         if (pkg.pkg) {
           pkg = pkg.pkg
         }
+
+        const registryDoc = window.myRegistryDocHandle.docSync()
         const { registry, name, version } = pkg
 
         if (!name || !version) {
@@ -213,26 +215,22 @@ export class AutomergeRegistry {
         const docUrl = registryDoc.packages?.[name]?.[version]
         if (!docUrl) throw new Error(`package ${name} not found in registry`)
 
-        const url = new URL(`/automerge-repo/${docUrl}/fileContents`, window.location)
+        const url = new URL(`/automerge-repo/${docUrl}/fileContents/`, window.location)
         return url.toString()
       },
 
       parseUrlPkg(stringUrl) {
         const url = new URL(stringUrl)
-
-        if (!url.pathname.startsWith("/automerge-repo")) return null
-
-        const regex = /^\/automerge-repo\/(?<docUrl>[^\/]*)\/fileContents\/(?<subpath>.*)$/
-        const { docUrl, subpath } = url.pathname.match(regex).groups
-
-        console.log("parseUrlPkg", stringUrl)
+        const match = url.pathname.match(PACKAGE_REGEX)
+        if (!match) return null
+        const { docUrl, subpath } = match.groups
 
         return new Promise((resolve, reject) => {
           repo
             .find(docUrl)
             .doc()
             .then((doc) => {
-              const { name, version } = doc.config
+              const { name, version } = doc
               console.log("parseUrlPkg", { docUrl, name, version, subpath })
 
               const result = {
@@ -241,11 +239,6 @@ export class AutomergeRegistry {
                 subpath,
               }
 
-              /*
-              const result = { registry: "automerge-registry", name, version }
-              console.log("parseUrlPkg RESULT", result)
-              */
-
               resolve(result)
             })
         })
@@ -253,7 +246,8 @@ export class AutomergeRegistry {
 
       ownsUrl(stringUrl) {
         const url = new URL(stringUrl)
-        return url.pathname.startsWith("/automerge-repo")
+        const match = url.pathname.match(PACKAGE_REGEX)
+        return !!match
       },
       /*resolveBuiltin(specifier, env) {
         throw new Error("not implemented")
@@ -261,16 +255,16 @@ export class AutomergeRegistry {
       },*/
       async getPackageConfig(pkgUrl) {
         const url = new URL(pkgUrl)
-        if (!url.pathname.startsWith("/automerge-repo")) return null
+        const match = url.pathname.match(PACKAGE_REGEX)
+        if (!match) return null
+        const { docUrl, subpath } = match.groups
 
-        const regex = /^\/automerge-repo\/(?<docUrl>[^\/]*)\/(?<subpath>.*)$/
-        const { docUrl, subpath } = url.pathname.match(regex).groups
         return new Promise((resolve, reject) => {
           repo
             .find(docUrl)
             .doc()
             .then((doc) => {
-              const { fileContents, ...packageJson } = doc.config
+              const { fileContents, ...packageJson } = doc
               resolve(packageJson)
             })
         })
