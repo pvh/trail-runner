@@ -50,11 +50,6 @@
     uuid "^8.3.2"
     xstate "^4.37.0"
 
-"@automerge/automerge-wasm@^0.2.14":
-  version "0.2.14"
-  resolved "https://registry.yarnpkg.com/@automerge/automerge-wasm/-/automerge-wasm-0.2.14.tgz#aa6668783f247ecd8598919b98f78d8eca27ccd1"
-  integrity sha512-GXopyTWmQXmslkKCX9xDoZY7NNdroBtIHXMdCzX6m86L7O0nWiX1p5iar6oOimtG2MELjknlndsSYgMIB8tTSA==
-
 "@automerge/automerge-wasm@file:./src/vendor/automerge-wasm":
   version "0.2.14"
 
@@ -63,7 +58,7 @@
   resolved "https://registry.yarnpkg.com/@automerge/automerge/-/automerge-2.1.2.tgz#16fb07d89ae01ff8058d0ed8ec5782c82d797fd2"
   integrity sha512-4/19/wx0xgrpZaD6b15hPJ1YyPBjNMopswEqtdrdeqde2MAYo5KX4Q+WWhQKX+UgAVOYfwNpNUheaSP41ej2yw==
   dependencies:
-    "@automerge/automerge-wasm" "^0.2.14"
+    "@automerge/automerge-wasm" "file:./src/vendor/automerge-wasm"
     uuid "^9.0.0"
 
 "@babel/code-frame@^7.22.5":

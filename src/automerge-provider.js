@@ -28,6 +28,12 @@ import { Generator } from "@jspm/generator"
 import { SemverRange } from "sver"
 import { next as Automerge } from "@automerge/automerge"
 
+const assignP = (obj, keys, val) => {
+  const lastKey = keys.pop()
+  const lastObj = keys.reduce((obj, key) => (obj[key] = obj[key] || {}), obj)
+  lastObj[lastKey] = val
+}
+
 export class AutomergeRegistry {
   automergeRepo
   myRegistryDocHandle
@@ -43,7 +49,7 @@ export class AutomergeRegistry {
     const cachingGenerator = new Generator({
       resolutions: {
         [pkgName]: `/automerge-repo/${pkgUrl}`,
-        "@automerge/automerge-wasm": "./src/web", // Uhhhh
+        "@automerge/automerge-wasm": "./src/vendor/automerge-wasm", // Uhhhh
       },
     })
     console.log("before packages", cachingGenerator.getMap())
@@ -145,7 +151,10 @@ export class AutomergeRegistry {
           contentType: res.headers.get("Content-Type"),
           contents: new Automerge.RawString(await res.text()),
         }
-        fileContents[path] = file // WASM / binary data?
+
+        // TODO: this doesn't support binary content in a package
+        const keys = path.split("/").filter((e) => e !== ".")
+        assignP(fileContents, keys, file)
       })
     )
 
@@ -153,8 +162,8 @@ export class AutomergeRegistry {
     const handle = this.automergeRepo.create()
     // assign the doc
     handle.change((doc) => {
-      Object.entries(config).forEach(([k, v]) => (doc[k] = v))
-      doc.fileContents = fileContents
+      Object.entries(fileContents).forEach(([k, v]) => (doc[k] = v))
+      doc.config = config
     })
 
     console.log("cached package", name, version, handle.url, handle.doc)
@@ -204,7 +213,7 @@ export class AutomergeRegistry {
         const docUrl = registryDoc.packages?.[name]?.[version]
         if (!docUrl) throw new Error(`package ${name} not found in registry`)
 
-        const url = new URL(`/automerge-repo/${docUrl}/`, window.location)
+        const url = new URL(`/automerge-repo/${docUrl}/fileContents`, window.location)
         return url.toString()
       },
 
@@ -213,7 +222,7 @@ export class AutomergeRegistry {
 
         if (!url.pathname.startsWith("/automerge-repo")) return null
 
-        const regex = /^\/automerge-repo\/(?<docUrl>[^\/]*)\/(?<subpath>.*)$/
+        const regex = /^\/automerge-repo\/(?<docUrl>[^\/]*)\/fileContents\/(?<subpath>.*)$/
         const { docUrl, subpath } = url.pathname.match(regex).groups
 
         console.log("parseUrlPkg", stringUrl)
@@ -223,7 +232,7 @@ export class AutomergeRegistry {
             .find(docUrl)
             .doc()
             .then((doc) => {
-              const { name, version } = doc
+              const { name, version } = doc.config
               console.log("parseUrlPkg", { docUrl, name, version, subpath })
 
               const result = {
@@ -261,7 +270,7 @@ export class AutomergeRegistry {
             .find(docUrl)
             .doc()
             .then((doc) => {
-              const { fileContents, ...packageJson } = doc
+              const { fileContents, ...packageJson } = doc.config
               resolve(packageJson)
             })
         })

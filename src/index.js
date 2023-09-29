@@ -1,13 +1,11 @@
 import * as Automerge from "@automerge/automerge"
+import { Repo } from "@automerge/automerge-repo"
+import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
+import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
 async function setupRepo() {
-  const { Repo } = await import("@automerge/automerge-repo")
-  const { IndexedDBStorageAdapter } = await import("@automerge/automerge-repo-storage-indexeddb")
-  const { BrowserWebSocketClientAdapter } = await import(
-    "@automerge/automerge-repo-network-websocket"
-  )
   return new Repo({
     storage: new IndexedDBStorageAdapter(),
     network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
@@ -16,6 +14,15 @@ async function setupRepo() {
   })
 }
 
+import * as AMWasm from "@automerge/automerge-wasm"
+console.log(AMWasm.promise)
+await AMWasm.promise
+console.log(AMWasm)
+console.log(AMWasm.create())
+
+Automerge.use(AMWasm)
+console.log("Initial promise loaded.")
+
 const repo = await setupRepo()
 
 // put it on the window to reach it from the fetch command elsewhere (just for convenience)
@@ -23,6 +30,7 @@ window.repo = repo
 window.automerge = Automerge
 
 function bootstrap(key, initialDocumentFn) {
+  console.log("IN BOOTSTRAP")
   const param = new URLSearchParams(window.location.search).get(key)
   if (param) {
     return repo.find(param)
@@ -65,14 +73,16 @@ console.log(await bootstrapDocHandle.doc())
 let { importMap, name } = await bootstrapDocHandle.doc()
 
 // Uncomment this if you want to regenerate the bootstrap document import map
+/*
 if (!importMap) {
   const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
   const registryDocHandle = repo.find(PRECOOKED_REGISTRY_DOC_URL)
   await registryDocHandle.doc()
   const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
   await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
-  importMap = bootstrapDocHandle.importMap
+  importMap = bootstrapDocHandle.docSync().importMap
 }
+/* */
 
 if (!importMap || !name) {
   throw new Error("Essential data missing from bootstrap document")
