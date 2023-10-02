@@ -18,6 +18,7 @@ import * as AMWasm from "@automerge/automerge-wasm"
 console.log(AMWasm.promise)
 await AMWasm.promise
 console.log(AMWasm)
+Automerge.use(AMWasm)
 console.log(AMWasm.create())
 
 Automerge.use(AMWasm)
