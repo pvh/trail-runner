@@ -1,4 +1,5 @@
 import * as Automerge from "@automerge/automerge"
+import * as AutomergeWasm from "@automerge/automerge-wasm"
 import { Repo } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
@@ -6,6 +7,9 @@ import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
 
 async function setupRepo() {
+  await AutomergeWasm.promise
+  Automerge.use(AutomergeWasm)
+
   return new Repo({
     storage: new IndexedDBStorageAdapter(),
     network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
@@ -13,16 +17,6 @@ async function setupRepo() {
     sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
 }
-
-import * as AMWasm from "@automerge/automerge-wasm"
-console.log(AMWasm.promise)
-await AMWasm.promise
-console.log(AMWasm)
-Automerge.use(AMWasm)
-console.log(AMWasm.create())
-
-Automerge.use(AMWasm)
-console.log("Initial promise loaded.")
 
 const repo = await setupRepo()
 
