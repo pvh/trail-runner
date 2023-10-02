@@ -58,14 +58,12 @@ window.process = {
 }
 
 console.log("Bootstrapping...")
-const bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
+const bootstrapDocHandle = (window.bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
   repo.find(PRECOOKED_BOOTSTRAP_DOC_URL)
-)
+))
 
-window.bootstrapDocHandle = bootstrapDocHandle
-
-console.log(await bootstrapDocHandle.doc())
 let { importMap, name } = await bootstrapDocHandle.doc()
+console.log("Module downloaded:", name)
 
 // Uncomment this if you want to regenerate the bootstrap document import map
 
@@ -73,6 +71,7 @@ if (!importMap) {
   const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
   const registryDocHandle = repo.find(PRECOOKED_REGISTRY_DOC_URL)
   await registryDocHandle.doc()
+
   const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
   await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
   importMap = bootstrapDocHandle.docSync().importMap
@@ -83,11 +82,14 @@ if (!importMap || !name) {
   throw new Error("Essential data missing from bootstrap document")
 }
 
+console.log("Applying import map...")
 await import("./vendor/es-module-shims@1.8.0.js")
-
 importShim.addImportMap(importMap)
+
+console.log("Importing...")
 const rootModule = await importShim(name)
 
+console.log("Mounting...")
 if (rootModule.mount) {
   const urlParams = new URLSearchParams(window.location.search)
   const params = Object.fromEntries(urlParams.entries())

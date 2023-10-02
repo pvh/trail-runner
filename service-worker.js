@@ -72,6 +72,13 @@ self.addEventListener("fetch", async (event) => {
         const handle = repo.find(docUrl)
         const doc = await handle.doc()
 
+        if (!doc) {
+          return new Response(`Document unavailable.\n${docUrl}`, {
+            status: 500,
+            headers: { "Content-Type": "text/plain" },
+          })
+        }
+
         if (path[0] === "package.json") {
           return new Response(JSON.stringify(doc))
         }
