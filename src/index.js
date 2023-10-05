@@ -3,18 +3,18 @@ import * as AutomergeWasm from "@automerge/automerge-wasm"
 import { Repo } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
+import { BroadcastChannelNetworkAdapter } from "@automerge/automerge-repo-network-broadcastchannel"
 
-const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:283ncrGdGXGECsrzLT6pznGM8BZd"
+const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:439bMbMZcrw67Ue8bXiNEP13tFrh"
 
 async function setupRepo() {
   await AutomergeWasm.promise
   Automerge.use(AutomergeWasm)
 
   return new Repo({
-    storage: new IndexedDBStorageAdapter(),
-    network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
-    peerId: "shared-worker-" + Math.round(Math.random() * 10000),
-    sharePolicy: async (peerId) => peerId.includes("storage-server"),
+    network: [new BroadcastChannelNetworkAdapter()],
+    peerId: "frontend-" + Math.round(Math.random() * 10000),
+    sharePolicy: async (peerId) => peerId.includes("service-worker"),
   })
 }
 
@@ -62,12 +62,14 @@ const bootstrapDocHandle = (window.bootstrapDocHandle = bootstrap("bootstrapDocU
   repo.find(PRECOOKED_BOOTSTRAP_DOC_URL)
 ))
 
-let { importMap, name } = await bootstrapDocHandle.doc()
+console.log(bootstrapDocHandle.url)
+let { importMap, name, module } = await bootstrapDocHandle.doc()
 console.log("Module downloaded:", name)
 
 // Uncomment this if you want to regenerate the bootstrap document import map
-
+/*
 if (!importMap) {
+  console.log("Updating import map...")
   const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
   const registryDocHandle = repo.find(PRECOOKED_REGISTRY_DOC_URL)
   await registryDocHandle.doc()
@@ -78,8 +80,8 @@ if (!importMap) {
 }
 /* */
 
-if (!importMap || !name) {
-  throw new Error("Essential data missing from bootstrap document")
+if (!importMap || !name || !module) {
+  throw new Error("Essential data missing from bootstrap document:", name, module, importMap)
 }
 
 console.log("Applying import map...")
@@ -87,7 +89,9 @@ await import("./vendor/es-module-shims@1.8.0.js")
 importShim.addImportMap(importMap)
 
 console.log("Importing...")
-const rootModule = await importShim(name)
+const rootModule = await importShim(
+  `/automerge-repo/${bootstrapDocHandle.url}/fileContents/${module}`
+)
 
 console.log("Mounting...")
 if (rootModule.mount) {

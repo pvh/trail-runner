@@ -48,7 +48,7 @@ export class AutomergeRegistry {
     // This is a nasty hack but we can ignore it for a little while.
     const cachingGenerator = new Generator({
       resolutions: {
-        [pkgName]: `/automerge-repo/${pkgUrl}`,
+        [pkgName]: `/automerge-repo/${pkgUrl}/fileContents`,
         "@automerge/automerge-wasm": "./src/vendor/automerge-wasm", // Uhhhh
       },
     })

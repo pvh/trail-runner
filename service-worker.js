@@ -3,6 +3,7 @@ import * as Automerge from "@automerge/automerge"
 import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
+import { BroadcastChannelNetworkAdapter } from "@automerge/automerge-repo-network-broadcastchannel"
 
 const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
 
@@ -111,7 +112,10 @@ self.addEventListener("fetch", async (event) => {
 console.log("Creating repo in SW!")
 const repo = new Repo({
   storage: new IndexedDBStorageAdapter(),
-  network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
-  peerId: "shared-worker-" + Math.round(Math.random() * 10000),
+  network: [
+    new BrowserWebSocketClientAdapter("wss://sync.automerge.org"),
+    new BroadcastChannelNetworkAdapter(),
+  ],
+  peerId: "service-worker-" + Math.round(Math.random() * 10000),
   sharePolicy: async (peerId) => peerId.includes("storage-server"),
 })

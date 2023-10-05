@@ -10,35 +10,42 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@automerge/automerge-repo-network-messagechannel@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo-network-messagechannel/-/automerge-repo-network-messagechannel-1.0.2.tgz#f462899f0f774f7c84e761cb6979ceb341ec248a"
-  integrity sha512-m/CLNhKlPIzQ33+H/uD3ADraUoUc1TqGHxQVQC5mEfyytLSnwNBB/tZOwcqcWKN2/Tuo7FiAgjFLfFY//Bv0zg==
+"@automerge/automerge-repo-network-broadcastchannel@^1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo-network-broadcastchannel/-/automerge-repo-network-broadcastchannel-1.0.6.tgz#191f94c25a6312fb7424b76343780e653ea13e34"
+  integrity sha512-dpa6UCDyhjIa65Y6cixhLB06x+WSb+6qgNUzAZ48izYKFLshcTCj3QQJO48wlE0Is1N/ZO5knfKarDt61TZY0g==
   dependencies:
-    "@automerge/automerge-repo" "^1.0.2"
+    "@automerge/automerge-repo" "^1.0.6"
 
-"@automerge/automerge-repo-network-websocket@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo-network-websocket/-/automerge-repo-network-websocket-1.0.2.tgz#43a51762de91ec073dec3322d082fbe88af8cc81"
-  integrity sha512-6cuZ/o5QciZ7fvkypEo9uqEUrCQ5dRkiwjUcf4+aJku6OaNVGttpzyktuwcbE693x4HlrRzow9UO039hMDaY6A==
+"@automerge/automerge-repo-network-messagechannel@^1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo-network-messagechannel/-/automerge-repo-network-messagechannel-1.0.6.tgz#c70174d6190ba61f7baaf9bc5dff980af7256762"
+  integrity sha512-9dLZfx09mwY4+1csofnooNz1R27fMsZcMMLbcXDE+hbdlueVfUIM1wtLREVESl79Lxz7HUgSFX9IZfbUWTr29A==
   dependencies:
-    "@automerge/automerge-repo" "^1.0.2"
+    "@automerge/automerge-repo" "^1.0.6"
+
+"@automerge/automerge-repo-network-websocket@^1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo-network-websocket/-/automerge-repo-network-websocket-1.0.6.tgz#13a4bdb5d441db342b13c60af79d289baf3e67b2"
+  integrity sha512-QLH02Tz7CmWQ0xqAKSFE/FZn3mFzG/hZGqqjnxw/PRxiYl2ffJeDDRC40zYOsv34ZddyYNCJzANGQXYSiscIxg==
+  dependencies:
+    "@automerge/automerge-repo" "^1.0.6"
     cbor-x "^1.3.0"
-    eventemitter3 "^4.0.7"
+    eventemitter3 "^5.0.1"
     isomorphic-ws "^5.0.0"
     ws "^8.7.0"
 
-"@automerge/automerge-repo-storage-indexeddb@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo-storage-indexeddb/-/automerge-repo-storage-indexeddb-1.0.2.tgz#6c66537365477011c676068e479f81edbfc78c14"
-  integrity sha512-kogFqF0Bmo8TA5qDnKhO/0g/9Xw3U7uBuyQGyAMWRSVwmvCcrlYEnMPkcGOSUxYMBBFOBdL+L125PQ15gDmmnQ==
+"@automerge/automerge-repo-storage-indexeddb@^1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo-storage-indexeddb/-/automerge-repo-storage-indexeddb-1.0.6.tgz#604c00970a312d1639c92f02360fb164d6603412"
+  integrity sha512-iitzHCvkDrV93MF4vaof5A+n9SwqJVznVvhXNVl/HeOvMcjFlZKYlWFY/PPxt0wAwEZvA17gz8LLTDQ8knejSw==
   dependencies:
-    "@automerge/automerge-repo" "^1.0.2"
+    "@automerge/automerge-repo" "^1.0.6"
 
-"@automerge/automerge-repo@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo/-/automerge-repo-1.0.2.tgz#c2f703855f134231ff721f63c70eab58fc3c3394"
-  integrity sha512-FXi7lNyKLv9RC9cUE59FUU8ZjvwdPFtm98Ho/xX4VTvhlST2LbxrH8rhoQARTMhh2EgwAF7r9Zc4esx4zNkUng==
+"@automerge/automerge-repo@^1.0.6":
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/@automerge/automerge-repo/-/automerge-repo-1.0.6.tgz#8ce4c0e4282076587078932490ddcf20bb017a5e"
+  integrity sha512-Ztpsd8K0lrnd3tOrjWho/jiTSQStaYSXgFNtrcTHXT9aC1kvuLSi3xAQTBmU9VxLb2FiEJ7fYLI0yBhHl4CPeQ==
   dependencies:
     bs58check "^3.0.1"
     cbor-x "^1.3.0"
@@ -47,7 +54,7 @@
     fast-sha256 "^1.3.0"
     tiny-typed-emitter "^2.1.0"
     ts-node "^10.9.1"
-    uuid "^8.3.2"
+    uuid "^9.0.0"
     xstate "^4.37.0"
 
 "@automerge/automerge-wasm@file:./src/vendor/automerge-wasm":
@@ -58,7 +65,7 @@
   resolved "https://registry.yarnpkg.com/@automerge/automerge/-/automerge-2.1.2.tgz#16fb07d89ae01ff8058d0ed8ec5782c82d797fd2"
   integrity sha512-4/19/wx0xgrpZaD6b15hPJ1YyPBjNMopswEqtdrdeqde2MAYo5KX4Q+WWhQKX+UgAVOYfwNpNUheaSP41ej2yw==
   dependencies:
-    "@automerge/automerge-wasm" "file:./src/vendor/automerge-wasm"
+    "@automerge/automerge-wasm" "^0.2.14"
     uuid "^9.0.0"
 
 "@babel/code-frame@^7.22.5":
@@ -1492,11 +1499,6 @@ event-target-shim@^5.0.0:
   resolved "https://registry.yarnpkg.com/event-target-shim/-/event-target-shim-5.0.1.tgz#5d4d3ebdf9583d63a5333ce2deb7480ab2b05789"
   integrity sha512-i/2XbnSz/uxRCU6+NdVJgKWDTM427+MqYbkQzD321DuCQJUqOuJKIA0IM2+W2xtYHdKOmZ4dR6fExsd4SXL+WQ==
 
-eventemitter3@^4.0.7:
-  version "4.0.7"
-  resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-4.0.7.tgz#2de9b68f6528d5644ef5c59526a1b4a07306169f"
-  integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==
-
 eventemitter3@^5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-5.0.1.tgz#53f5ffd0a492ac800721bb42c66b841de96423c4"
@@ -2928,11 +2930,6 @@ util-deprecate@^1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
-
-uuid@^8.3.2:
-  version "8.3.2"
-  resolved "https://registry.yarnpkg.com/uuid/-/uuid-8.3.2.tgz#80d5b5ced271bb9af6c445f21a1a04c606cefbe2"
-  integrity sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==
 
 uuid@^9.0.0:
   version "9.0.1"
