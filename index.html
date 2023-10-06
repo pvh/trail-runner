@@ -17,7 +17,7 @@
   </style>
   <script type="module">
     // First, spawn the serviceworker.
-    navigator.serviceWorker.register("/service-worker.js", { type: "module" }).then(
+    navigator.serviceWorker.register("service-worker.js", { type: "module" }).then(
       (registration) => {
         console.log("ServiceWorker registration successful with scope:", registration.scope)
 
