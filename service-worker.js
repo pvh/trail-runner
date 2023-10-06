@@ -57,7 +57,7 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", async (event) => {
   const url = new URL(event.request.url)
 
-  if (url.pathname.match("$(.*)/automerge-repo/automerge:")) {
+  if (url.pathname.match(new RegExp("^(.*)/automerge-repo/automerge:"))) {
     event.respondWith(
       (async () => {
         const url = new URL(event.request.url)
