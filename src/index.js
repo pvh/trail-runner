@@ -24,7 +24,7 @@ const repo = await setupRepo()
 // Ideally we wouldn't do this but until we can import the same module from "inside the box"
 // this prevents us from creating doppelganger imports and dealing with all the wasm nonsense.
 window.repo = repo
-window.Automerge = Automerge
+window.Automerge = window.automerge = Automerge
 
 function bootstrap(key, initialDocumentFn) {
   const param = new URLSearchParams(window.location.search).get(key)
@@ -92,9 +92,12 @@ await import("./vendor/es-module-shims@1.8.0.js")
 importShim.addImportMap(importMap)
 
 console.log("Importing...")
-const rootModule = await importShim(
-  `/automerge-repo/${bootstrapDocHandle.url}/fileContents/${module}`
-)
+// this path relies on knowing how the serviceWorker works & how the import maps are created
+// there's probably a better way to model this
+const modulePath = `/automerge-repo/${bootstrapDocHandle.url}/fileContents/${module}`
+// and this is required for correct relative paths on non-localhost
+const moduleUrl = new URL(modulePath, window.location)
+const rootModule = await importShim(moduleUrl)
 
 console.log("Mounting...")
 if (rootModule.mount) {
