@@ -94,9 +94,9 @@ importShim.addImportMap(importMap)
 console.log("Importing...")
 // this path relies on knowing how the serviceWorker works & how the import maps are created
 // there's probably a better way to model this
-const modulePath = `/automerge-repo/${bootstrapDocHandle.url}/fileContents/${module}`
+const modulePath = `./automerge-repo/${bootstrapDocHandle.url}/fileContents/${module}`
 // and this is required for correct relative paths on non-localhost
-const moduleUrl = new URL(modulePath, window.location)
+const moduleUrl = new URL(modulePath, window.location).toString()
 const rootModule = await importShim(moduleUrl)
 
 console.log("Mounting...")
