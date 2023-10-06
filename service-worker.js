@@ -57,11 +57,11 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", async (event) => {
   const url = new URL(event.request.url)
 
-  if (url.pathname.match(new RegExp("^(.*)/automerge-repo/automerge:"))) {
+  const match = url.pathname.match(new RegExp("^.*/automerge-repo/(automerge:.*)"))
+  if (match) {
     event.respondWith(
       (async () => {
-        const url = new URL(event.request.url)
-        let [_, docUrl, ...path] = url.pathname.split("/").slice(1)
+        let [docUrl, ...path] = match[1].split("/")
 
         if (!isValidAutomergeUrl(docUrl)) {
           return new Response(`Invalid Automerge URL\n${docUrl}`, {
