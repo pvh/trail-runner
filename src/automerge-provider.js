@@ -19,6 +19,8 @@ To update the cache:
 
 registry.update()
 
+TODO: This should really get published on NPM and moved out of here since we're duplicating it in the importmapper.
+
 */
 
 // TODO: support different registries: we should separate native from npm

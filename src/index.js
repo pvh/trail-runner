@@ -20,12 +20,13 @@ async function setupRepo() {
 
 const repo = await setupRepo()
 
-// put it on the window to reach it from the fetch command elsewhere (just for convenience)
+// Put the repo and Automerge on the window.
+// Ideally we wouldn't do this but until we can import the same module from "inside the box"
+// this prevents us from creating doppelganger imports and dealing with all the wasm nonsense.
 window.repo = repo
-window.automerge = Automerge
+window.Automerge = Automerge
 
 function bootstrap(key, initialDocumentFn) {
-  console.log("IN BOOTSTRAP")
   const param = new URLSearchParams(window.location.search).get(key)
   if (param) {
     return repo.find(param)
@@ -67,6 +68,8 @@ let { importMap, name, module } = await bootstrapDocHandle.doc()
 console.log("Module downloaded:", name)
 
 // Uncomment this if you want to regenerate the bootstrap document import map
+// You should be able to use the importMap generator tool instead of this, but if that's
+// broken, there's this.
 /*
 if (!importMap) {
   console.log("Updating import map...")
