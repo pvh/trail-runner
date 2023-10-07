@@ -1,24 +1,75 @@
 import * as Automerge from "@automerge/automerge"
 import * as AutomergeWasm from "@automerge/automerge-wasm"
 import { Repo } from "@automerge/automerge-repo"
-import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
-import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
-import { BroadcastChannelNetworkAdapter } from "@automerge/automerge-repo-network-broadcastchannel"
+import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:439bMbMZcrw67Ue8bXiNEP13tFrh"
+
+// First, spawn the serviceworker.
+async function setupServiceWorker() {
+  navigator.serviceWorker.register("service-worker.js", { type: "module" }).then(
+    (registration) => {
+      console.log("ServiceWorker registration successful with scope:", registration.scope)
+
+      // Ensure the service worker is in the 'activated' state
+      if (registration.installing) {
+        registration.installing.addEventListener("statechange", function (event) {
+          if (event.target.state === "activated") {
+            // Do any additional setup once the service worker is ready
+          }
+        })
+      }
+    },
+    (error) => {
+      console.log("ServiceWorker registration failed:", error)
+    }
+  )
+  navigator.serviceWorker.oncontrollerchange = function () {
+    // A new service worker is now controlling the page
+    if (navigator.serviceWorker.controller) {
+      // TODO: Get rid of the old MessageChannel
+    }
+  }
+}
 
 async function setupRepo() {
   await AutomergeWasm.promise
   Automerge.use(AutomergeWasm)
 
-  return new Repo({
-    network: [new BroadcastChannelNetworkAdapter()],
+  // no network, no storage... not yet.
+  const repo = new Repo({
+    network: [],
     peerId: "frontend-" + Math.round(Math.random() * 10000),
     sharePolicy: async (peerId) => peerId.includes("service-worker"),
   })
+
+  return repo
 }
 
+function establishMessageChannel(repo) {
+  if (navigator.serviceWorker.controller) {
+    const messageChannel = new MessageChannel()
+
+    repo.networkSubsystem.addNetworkAdapter(
+      // no weakref on this side, we're the short-lived partner
+      new MessageChannelNetworkAdapter(messageChannel.port1)
+    )
+
+    // Send a message to the service worker with one port of the channel
+    navigator.serviceWorker.controller.postMessage({ type: "INIT_PORT" }, [messageChannel.port2])
+  }
+}
+
+await setupServiceWorker()
 const repo = await setupRepo()
+
+// Try establishing a MessageChannel when the page loads
+establishMessageChannel(repo)
+
+// Re-establish the MessageChannel if the controlling service worker changes
+navigator.serviceWorker.oncontrollerchange = function () {
+  establishMessageChannel(repo)
+}
 
 // Put the repo and Automerge on the window.
 // Ideally we wouldn't do this but until we can import the same module from "inside the box"

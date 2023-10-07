@@ -15,26 +15,6 @@
       height: 100%;
     }
   </style>
-  <script type="module">
-    // First, spawn the serviceworker.
-    navigator.serviceWorker.register("service-worker.js", { type: "module" }).then(
-      (registration) => {
-        console.log("ServiceWorker registration successful with scope:", registration.scope)
-
-        // Ensure the service worker is in the 'activated' state
-        if (registration.installing) {
-          registration.installing.addEventListener("statechange", function (event) {
-            if (event.target.state === "activated") {
-              // Do any additional setup once the service worker is ready
-            }
-          })
-        }
-      },
-      (error) => {
-        console.log("ServiceWorker registration failed:", error)
-      }
-    )
-  </script>
   <script type="module" src="./src/index.js"></script>
   <div id="root">Standby for launch...</div>
 </html>

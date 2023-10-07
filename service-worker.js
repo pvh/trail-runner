@@ -3,7 +3,7 @@ import * as Automerge from "@automerge/automerge"
 import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
-import { BroadcastChannelNetworkAdapter } from "@automerge/automerge-repo-network-broadcastchannel"
+import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
 const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
 
@@ -22,36 +22,59 @@ const ASSETS_TO_CACHE = [] /*
   "/src/vendor/automerge-wasm/package.json",
 ]*/
 
+function initializeRepo() {
+  const repo = new Repo({
+    storage: new IndexedDBStorageAdapter(),
+    network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
+    peerId: "service-worker-" + Math.round(Math.random() * 10000),
+    sharePolicy: async (peerId) => peerId.includes("storage-server"),
+  })
+  return repo
+}
+
+console.log("Before registration")
 self.addEventListener("install", (event) => {
+  console.log("Installing SW")
   event.waitUntil(
     Promise.all([
       new Promise(async (resolve) => {
         await AutomergeWasm.promise
         Automerge.use(AutomergeWasm)
+        // ah, stash it on the global. why not.
+        self.repo = initializeRepo()
+        console.log("Repo's up")
         resolve()
       }),
       caches.open(CACHE_NAME).then((cache) => {
         cache.addAll(ASSETS_TO_CACHE)
       }),
-    ])
+    ]).then(() => self.skipWaiting())
   )
 })
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    clients.claim().then(() => {
-      const cacheWhitelist = [CACHE_NAME]
-      return caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheWhitelist.indexOf(cacheName) === -1) {
-              return caches.delete(cacheName) // Remove old caches
-            }
-          })
-        )
-      })
-    })
-  )
+self.addEventListener("message", (event) => {
+  console.log("Client messaged", event.data)
+  if (event.data && event.data.type === "INIT_PORT") {
+    const clientPort = event.ports[0]
+    repo.networkSubsystem.addNetworkAdapter(
+      new MessageChannelNetworkAdapter(clientPort, { useWeakRef: true })
+    )
+  }
+})
+
+async function clearOldCaches() {
+  const cacheWhitelist = [CACHE_NAME]
+  const cacheNames = await caches.keys()
+  const deletePromises = cacheNames.map((cacheName) => {
+    if (!cacheWhitelist.includes(cacheName)) {
+      return caches.delete(cacheName)
+    }
+  })
+  await Promise.all(deletePromises)
+}
+
+self.addEventListener("activate", async (event) => {
+  event.waitUntil(clearOldCaches())
 })
 
 self.addEventListener("fetch", async (event) => {
@@ -107,15 +130,4 @@ self.addEventListener("fetch", async (event) => {
       })()
     )
   }
-})
-
-console.log("Creating repo in SW!")
-const repo = new Repo({
-  storage: new IndexedDBStorageAdapter(),
-  network: [
-    new BrowserWebSocketClientAdapter("wss://sync.automerge.org"),
-    new BroadcastChannelNetworkAdapter(),
-  ],
-  peerId: "service-worker-" + Math.round(Math.random() * 10000),
-  sharePolicy: async (peerId) => peerId.includes("storage-server"),
 })
