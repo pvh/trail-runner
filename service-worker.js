@@ -5,8 +5,6 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
-const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
-
 const CACHE_NAME = "v1"
 const ASSETS_TO_CACHE = [] /*
   "/",
@@ -22,29 +20,30 @@ const ASSETS_TO_CACHE = [] /*
   "/src/vendor/automerge-wasm/package.json",
 ]*/
 
-function initializeRepo() {
+async function initializeRepo() {
+  console.log("Creating repo")
   const repo = new Repo({
     storage: new IndexedDBStorageAdapter(),
     network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
-    peerId: "service-worker-" + Math.round(Math.random() * 10000),
+    peerId: "service-worker-" + Math.round(Math.random() * 1000000),
     sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
+
+  await AutomergeWasm.promise
+  Automerge.use(AutomergeWasm)
+
   return repo
 }
 
 console.log("Before registration")
+const repo = initializeRepo()
+// return a promise from this so that we can wait on it before returning fetch/addNetworkAdapter
+// because otherwise we might not have the WASM module loaded before we get to work.
+
 self.addEventListener("install", (event) => {
   console.log("Installing SW")
   event.waitUntil(
     Promise.all([
-      new Promise(async (resolve) => {
-        await AutomergeWasm.promise
-        Automerge.use(AutomergeWasm)
-        // ah, stash it on the global. why not.
-        self.repo = initializeRepo()
-        console.log("Repo's up")
-        resolve()
-      }),
       caches.open(CACHE_NAME).then((cache) => {
         cache.addAll(ASSETS_TO_CACHE)
       }),
@@ -52,11 +51,11 @@ self.addEventListener("install", (event) => {
   )
 })
 
-self.addEventListener("message", (event) => {
+self.addEventListener("message", async (event) => {
   console.log("Client messaged", event.data)
   if (event.data && event.data.type === "INIT_PORT") {
     const clientPort = event.ports[0]
-    repo.networkSubsystem.addNetworkAdapter(
+    ;(await repo).networkSubsystem.addNetworkAdapter(
       new MessageChannelNetworkAdapter(clientPort, { useWeakRef: true })
     )
   }
@@ -74,7 +73,9 @@ async function clearOldCaches() {
 }
 
 self.addEventListener("activate", async (event) => {
-  event.waitUntil(clearOldCaches())
+  console.log("Activating service worker.")
+  await clearOldCaches()
+  clients.claim()
 })
 
 self.addEventListener("fetch", async (event) => {
@@ -93,7 +94,7 @@ self.addEventListener("fetch", async (event) => {
           })
         }
 
-        const handle = repo.find(docUrl)
+        const handle = (await repo).find(docUrl)
         const doc = await handle.doc()
 
         if (!doc) {

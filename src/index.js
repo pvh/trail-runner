@@ -1,6 +1,7 @@
 import * as Automerge from "@automerge/automerge"
 import * as AutomergeWasm from "@automerge/automerge-wasm"
 import { Repo } from "@automerge/automerge-repo"
+import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:439bMbMZcrw67Ue8bXiNEP13tFrh"
@@ -10,26 +11,11 @@ async function setupServiceWorker() {
   navigator.serviceWorker.register("service-worker.js", { type: "module" }).then(
     (registration) => {
       console.log("ServiceWorker registration successful with scope:", registration.scope)
-
-      // Ensure the service worker is in the 'activated' state
-      if (registration.installing) {
-        registration.installing.addEventListener("statechange", function (event) {
-          if (event.target.state === "activated") {
-            // Do any additional setup once the service worker is ready
-          }
-        })
-      }
     },
     (error) => {
       console.log("ServiceWorker registration failed:", error)
     }
   )
-  navigator.serviceWorker.oncontrollerchange = function () {
-    // A new service worker is now controlling the page
-    if (navigator.serviceWorker.controller) {
-      // TODO: Get rid of the old MessageChannel
-    }
-  }
 }
 
 async function setupRepo() {
@@ -38,6 +24,7 @@ async function setupRepo() {
 
   // no network, no storage... not yet.
   const repo = new Repo({
+    storage: new IndexedDBStorageAdapter(),
     network: [],
     peerId: "frontend-" + Math.round(Math.random() * 10000),
     sharePolicy: async (peerId) => peerId.includes("service-worker"),
@@ -62,12 +49,11 @@ function establishMessageChannel(repo) {
 
 await setupServiceWorker()
 const repo = await setupRepo()
-
-// Try establishing a MessageChannel when the page loads
 establishMessageChannel(repo)
 
 // Re-establish the MessageChannel if the controlling service worker changes
 navigator.serviceWorker.oncontrollerchange = function () {
+  console.log("Controller changed!")
   establishMessageChannel(repo)
 }
 
