@@ -37,6 +37,8 @@ async function initializeRepo() {
 
 console.log("Before registration")
 const repo = initializeRepo()
+self.repo = repo // put it on the global context for interactive use
+
 // return a promise from this so that we can wait on it before returning fetch/addNetworkAdapter
 // because otherwise we might not have the WASM module loaded before we get to work.
 
