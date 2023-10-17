@@ -23,14 +23,3 @@ Aside from creating an environment where we can use JSPM, it also loads `index.j
 
 This file creates a generator, then looks inside the next file (app.js) to decide what libraries it will need and fetches and inlines them into automerge. (It doesn't do this if it already has an importMap and you haven't asked to regenerate it via the URL.)
 
-### app.js
-
-This is our trivial little pseudo-app. It doesn't do anything but note that we use dynamic imports because static ones don't work. I haven't looked into why yet, because it's late and I'm pleased with my progress so far so I'm calling it a night.
-
-# Next Steps
-
-I'm not entirely sure! We could figure out whether automerge-repo works "inside the box" here as well, then try to implement a simple blutack-like app inside this space. (Or... just port over blutack?)
-
-We should think more about the importMaps and how to compose them / share content-types.
-
-Last, I should probably give Guy (the JSPM author) a tour of this madness and get his input on how to improve it. I expect there are some JSPM features I've misunderstood that could make life easier and this code cleaner, particularly the process of proxying the modules.

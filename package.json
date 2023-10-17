@@ -21,7 +21,8 @@
     "@automerge/automerge-repo-network-broadcastchannel": "^1.0.10",
     "@automerge/automerge-repo-network-messagechannel": "^1.0.10",
     "@automerge/automerge-repo-network-websocket": "^1.0.10",
-    "@automerge/automerge-repo-storage-indexeddb": "^1.0.10"
+    "@automerge/automerge-repo-storage-indexeddb": "^1.0.10",
+    "es-module-shims": "^1.8.0"
   },
   "resolutions": {
     "@automerge/automerge-wasm": "file:./src/vendor/automerge-wasm"

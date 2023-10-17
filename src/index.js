@@ -96,51 +96,40 @@ window.process = {
 }
 
 console.log("Bootstrapping...")
-const bootstrapDocHandle = (window.bootstrapDocHandle = bootstrap("bootstrapDocUrl", (doc) =>
+const appHandle = (window.appHandle = bootstrap("app", (doc) =>
   repo.find(PRECOOKED_BOOTSTRAP_DOC_URL)
 ))
 
-console.log(bootstrapDocHandle.url)
-let { importMap, name, module } = await bootstrapDocHandle.doc()
+console.log(appHandle.url)
+let { importMap, name, module } = await appHandle.doc()
+
 console.log("Module downloaded:", name)
-
-// Uncomment this if you want to regenerate the bootstrap document import map
-// You should be able to use the importMap generator tool instead of this, but if that's
-// broken, there's this.
-/*
-if (!importMap) {
-  console.log("Updating import map...")
-  const PRECOOKED_REGISTRY_DOC_URL = "automerge:LFmNSGzPyPkkcnrvimyAGWDWHkM"
-  const registryDocHandle = repo.find(PRECOOKED_REGISTRY_DOC_URL)
-  await registryDocHandle.doc()
-
-  const { generateInitialImportMap } = await import("./bootstrap-importmap.js")
-  await generateInitialImportMap(repo, registryDocHandle, bootstrapDocHandle)
-  importMap = bootstrapDocHandle.docSync().importMap
-}
-/* */
 
 if (!importMap || !name || !module) {
   throw new Error("Essential data missing from bootstrap document:", name, module, importMap)
 }
 
 console.log("Applying import map...")
-await import("./vendor/es-module-shims@1.8.0.js")
+await import("es-module-shims")
 importShim.addImportMap(importMap)
 
 console.log("Importing...")
+
 // this path relies on knowing how the serviceWorker works & how the import maps are created
 // there's probably a better way to model this
-const modulePath = `./automerge-repo/${bootstrapDocHandle.url}/fileContents/${module}`
-// and this is required for correct relative paths on non-localhost
+const modulePath = `./automerge-repo/${appHandle.url}/fileContents/${module}`
 const moduleUrl = new URL(modulePath, window.location).toString()
+
+// and now we can load the module.
 const rootModule = await importShim(moduleUrl)
+
+console.log(rootModule)
 
 console.log("Mounting...")
 if (rootModule.mount) {
   const urlParams = new URLSearchParams(window.location.search)
   const params = Object.fromEntries(urlParams.entries())
-  rootModule.mount(document.getElementById("root"), params)
+  rootModule.mount(document.getElementById("root"), { ...params, bootstrapDocUrl: appHandle.url })
 } else {
   console.error("Root module doesn't export a mount function", rootModule)
 }
