@@ -100,7 +100,7 @@ self.addEventListener("fetch", async (event) => {
         const doc = await handle.doc()
 
         if (!doc) {
-          return new Response(`Document unavailable.\n${docUrl}`, {
+          return new Response(`Document unavailable.\n${docUrl}: ${handle.state}`, {
             status: 500,
             headers: { "Content-Type": "text/plain" },
           })
