@@ -4,7 +4,7 @@ import { Repo } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
-const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:bmVtAiipQaUM5PomP5xg85eCmhj"
+const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:49koKGh1ewRgt5UJU7X7j6D4RM3Z"
 
 // First, spawn the serviceworker.
 async function setupServiceWorker() {
@@ -101,7 +101,11 @@ const appHandle = (window.appHandle = bootstrap("app", (doc) =>
 ))
 
 console.log(appHandle.url)
-let { importMap, name, module } = await appHandle.doc()
+const doc = await appHandle.doc()
+if (!doc) {
+  throw new Error(`Failed to load ${appHandle.url}`)
+}
+let { importMap, name, module } = doc
 
 console.log("Module downloaded:", name)
 
