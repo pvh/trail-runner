@@ -4,7 +4,7 @@ import { Repo } from "@automerge/automerge-repo"
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
-const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:49koKGh1ewRgt5UJU7X7j6D4RM3Z"
+const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:2tnbAT56Vvqsa7gR25faz5ohkQVy"
 
 // First, spawn the serviceworker.
 async function setupServiceWorker() {
