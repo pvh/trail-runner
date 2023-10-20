@@ -88,7 +88,7 @@ if (!importMap || !name || !module) {
 }
 
 console.log("Applying import map...")
-window.esmsInitOptions = { shimMode: true }
+window.esmsInitOptions = { shimMode: true, mapOverrides: true }
 await import("es-module-shims")
 importShim.addImportMap(importMap)
 
