@@ -8,16 +8,13 @@ const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:49koKGh1ewRgt5UJU7X7j6D4RM3Z"
 
 // First, spawn the serviceworker.
 async function setupServiceWorker() {
-  navigator.serviceWorker.register("service-worker.js", { type: "module" }).then(
-    (registration) => {
-      console.log("ServiceWorker registration successful with scope:", registration.scope)
-    },
-    (error) => {
-      console.log("ServiceWorker registration failed:", error)
-    }
-  )
+  const registration = await navigator.serviceWorker.register("service-worker.js", {
+    type: "module",
+  })
+  console.log("ServiceWorker registration successful with scope:", registration.scope)
 }
 
+// Then set up an automerge repo (loading with our annoying WASM hack)
 async function setupRepo() {
   await AutomergeWasm.promise
   Automerge.use(AutomergeWasm)
@@ -33,25 +30,25 @@ async function setupRepo() {
   return repo
 }
 
+// Now introduce the two to each other. This frontend takes advantage of loaded state in the SW.
 function establishMessageChannel(repo) {
-  if (navigator.serviceWorker.controller) {
-    const messageChannel = new MessageChannel()
-
-    repo.networkSubsystem.addNetworkAdapter(
-      // no weakref on this side, we're the short-lived partner
-      new MessageChannelNetworkAdapter(messageChannel.port1)
-    )
-
-    // Send a message to the service worker with one port of the channel
-    navigator.serviceWorker.controller.postMessage({ type: "INIT_PORT" }, [messageChannel.port2])
+  if (!navigator.serviceWorker.controller) {
+    throw new Error("No service worker is controlling this tab right now.")
   }
+
+  // Send one side of a MessageChannel to the service worker and register the other with the repo.
+  const messageChannel = new MessageChannel()
+  repo.networkSubsystem.addNetworkAdapter(new MessageChannelNetworkAdapter(messageChannel.port1))
+  navigator.serviceWorker.controller.postMessage({ type: "INIT_PORT" }, [messageChannel.port2])
 }
 
+// (Actually do the things above here.)
 await setupServiceWorker()
 const repo = await setupRepo()
 establishMessageChannel(repo)
 
 // Re-establish the MessageChannel if the controlling service worker changes
+// Does this work? It's hard to really test very well.
 navigator.serviceWorker.oncontrollerchange = function () {
   console.log("Controller changed!")
   establishMessageChannel(repo)
@@ -63,30 +60,9 @@ navigator.serviceWorker.oncontrollerchange = function () {
 window.repo = repo
 window.Automerge = window.automerge = Automerge
 
-function bootstrap(key, initialDocumentFn) {
-  const param = new URLSearchParams(window.location.search).get(key)
-  if (param) {
-    return repo.find(param)
-  }
-
-  const docUrl = localStorage.getItem(key)
-  if (!docUrl) {
-    const handle = initialDocumentFn(repo)
-    localStorage.setItem(key, handle.url)
-    return handle
-  } else {
-    return repo.find(docUrl)
-  }
-}
-
-window.esmsInitOptions = {
-  shimMode: true,
-  mapOverrides: true,
-  fetch: window.fetch,
-}
-
 // We establish a faux window.process object to improve support for
 // some packages that test for a node environment but don't actually require one.
+// Most of this is cruft and at some point it would be good to do away with this.
 window.process = {
   env: { DEBUG_COLORS: "false" },
   browser: true,
@@ -95,45 +71,41 @@ window.process = {
   cwd: () => ".",
 }
 
-console.log("Bootstrapping...")
-const appHandle = (window.appHandle = bootstrap("app", (doc) =>
-  repo.find(PRECOOKED_BOOTSTRAP_DOC_URL)
-))
+// Choose the initial module to load.
+const appUrl = new URLSearchParams(window.location.search).get("app") || PRECOOKED_BOOTSTRAP_DOC_URL
+const appHandle = (window.appHandle = repo.find(appUrl))
+console.log(`Booting from module at: ${appUrl}`)
 
-console.log(appHandle.url)
+// Load the document, then add the import map found inside.
 const doc = await appHandle.doc()
 if (!doc) {
-  throw new Error(`Failed to load ${appHandle.url}`)
+  throw new Error(`Failed to load ${appHandle.url}: ${appHandle.state}`)
 }
+
 let { importMap, name, module } = doc
-
-console.log("Module downloaded:", name)
-
 if (!importMap || !name || !module) {
   throw new Error("Essential data missing from bootstrap document:", name, module, importMap)
 }
 
 console.log("Applying import map...")
+window.esmsInitOptions = { shimMode: true }
 await import("es-module-shims")
 importShim.addImportMap(importMap)
 
+// Next, import the module (hosted out of the service worker)
 console.log("Importing...")
-
 // this path relies on knowing how the serviceWorker works & how the import maps are created
 // there's probably a better way to model this
 const modulePath = `./automerge-repo/${appHandle.url}/fileContents/${module}`
 const moduleUrl = new URL(modulePath, window.location).toString()
-
-// and now we can load the module.
 const rootModule = await importShim(moduleUrl)
+console.log("Module imported:", rootModule)
 
-console.log(rootModule)
-
-console.log("Mounting...")
-if (rootModule.mount) {
-  const urlParams = new URLSearchParams(window.location.search)
-  const params = Object.fromEntries(urlParams.entries())
-  rootModule.mount(document.getElementById("root"), { ...params, bootstrapDocUrl: appHandle.url })
-} else {
+// and now (at last) we can mount the module, passing in the URL params.
+if (!rootModule.mount) {
   console.error("Root module doesn't export a mount function", rootModule)
 }
+
+const urlParams = new URLSearchParams(window.location.search)
+const params = Object.fromEntries(urlParams.entries())
+rootModule.mount(document.getElementById("root"), params)
