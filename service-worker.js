@@ -9,16 +9,14 @@ const CACHE_NAME = "v1"
 const ASSETS_TO_CACHE = [] /*
   "/",
   "/index.html",
+  //   "/favicon.ico",
   "/src/index.js",
-  "/src/automerge-provider.js",
-  "/src/bootstrap-importmap.js",
-  "/src/vendor/es-module-shims@1.8.0.js",
-  "/src/vendor/es-module-shims@1.8.0.js.map",
+  "/src/vendor/automerge-wasm/web/automerge_wasm_bg.js",
   "/src/vendor/automerge-wasm/web/automerge_wasm_bg.wasm",
   "/src/vendor/automerge-wasm/web/automerge_wasm.js",
   "/src/vendor/automerge-wasm/web/index.js",
   "/src/vendor/automerge-wasm/package.json",
-]*/
+] */
 
 async function initializeRepo() {
   console.log("Creating repo")

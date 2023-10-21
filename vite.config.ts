@@ -13,7 +13,7 @@ export default defineConfig({
       },
       output: {
         entryFileNames: (assetInfo) =>
-          assetInfo.name === "service-worker" ? "[name].js" : "assets/[name]-[hash].js",
+          assetInfo.name === "service-worker" ? "[name].js" : "assets/[name].js",
       },
     },
   },
