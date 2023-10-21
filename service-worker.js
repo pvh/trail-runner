@@ -6,17 +6,30 @@ import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
 const CACHE_NAME = "v1"
-const ASSETS_TO_CACHE = [] /*
+const ASSETS_TO_CACHE = [
   "/",
+  "/automerge_wasm_bg.wasm",
+  "/es-module-shims.js",
+  "/favicon.ico",
   "/index.html",
-  //   "/favicon.ico",
-  "/src/index.js",
+  "/index.js",
+  "/main.js",
   "/src/vendor/automerge-wasm/web/automerge_wasm_bg.js",
   "/src/vendor/automerge-wasm/web/automerge_wasm_bg.wasm",
   "/src/vendor/automerge-wasm/web/automerge_wasm.js",
   "/src/vendor/automerge-wasm/web/index.js",
   "/src/vendor/automerge-wasm/package.json",
-] */
+  "/logos/logo-favicon-16x16.png",
+  "/logos/logo-favicon-32x32.png",
+  "/logos/logo-favicon-64x64.png",
+  "/logos/logo-favicon-96x96.png",
+  "/logos/logo-favicon-128x128.png",
+  "/logos/logo-favicon-192x192.png",
+  "/logos/logo-favicon-196x196.png",
+  "/logos/logo-favicon-310x310-transparent.png",
+  "/logos/logo-favicon-apple-touch.png",
+  "/logos/logo-lockup.svg",
+]
 
 async function initializeRepo() {
   console.log("Creating repo")
@@ -44,8 +57,16 @@ self.addEventListener("install", (event) => {
   console.log("Installing SW")
   event.waitUntil(
     Promise.all([
-      caches.open(CACHE_NAME).then((cache) => {
-        cache.addAll(ASSETS_TO_CACHE)
+      caches.open(CACHE_NAME).then(async (cache) => {
+        for (let i of ASSETS_TO_CACHE) {
+          try {
+            console.log("sw: cache.add", i)
+            const ok = await cache.add(i)
+          } catch (err) {
+            console.warn("sw: cache.add", err)
+          }
+        }
+        // cache.addAll(ASSETS_TO_CACHE)
       }),
     ]).then(() => self.skipWaiting())
   )
@@ -128,6 +149,21 @@ self.addEventListener("fetch", async (event) => {
           status: 500,
           headers: { "Content-Type": "text/plain" },
         })
+      })()
+    )
+  } else {
+    event.respondWith(
+      (async () => {
+        const r = await caches.match(event.request)
+        console.log(`[Service Worker] Fetching resource from cache: ${event.request.url}`)
+        if (r) {
+          return r
+        }
+        const response = await fetch(event.request)
+        const cache = await caches.open(CACHE_NAME)
+        console.log(`[Service Worker] Caching new resource: ${event.request.url}`)
+        cache.put(event.request, response.clone())
+        return response
       })()
     )
   }

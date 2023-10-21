@@ -12,8 +12,9 @@ export default defineConfig({
         "service-worker": resolve(__dirname, "service-worker.js"),
       },
       output: {
-        entryFileNames: (assetInfo) =>
-          assetInfo.name === "service-worker" ? "[name].js" : "assets/[name].js",
+        entryFileNames: `[name].js`,
+        chunkFileNames: `[name].js`,
+        assetFileNames: `[name].[ext]`,
       },
     },
   },
