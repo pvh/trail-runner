@@ -33,7 +33,8 @@ async function setupRepo() {
 // Now introduce the two to each other. This frontend takes advantage of loaded state in the SW.
 function establishMessageChannel(repo) {
   if (!navigator.serviceWorker.controller) {
-    throw new Error("No service worker is controlling this tab right now.")
+    console.log("No service worker is controlling this tab right now.")
+    return
   }
 
   // Send one side of a MessageChannel to the service worker and register the other with the repo.
@@ -42,17 +43,16 @@ function establishMessageChannel(repo) {
   navigator.serviceWorker.controller.postMessage({ type: "INIT_PORT" }, [messageChannel.port2])
 }
 
-// (Actually do the things above here.)
-await setupServiceWorker()
-const repo = await setupRepo()
-establishMessageChannel(repo)
-
 // Re-establish the MessageChannel if the controlling service worker changes
-// Does this work? It's hard to really test very well.
 navigator.serviceWorker.oncontrollerchange = function () {
   console.log("Controller changed!")
   establishMessageChannel(repo)
 }
+
+// (Actually do the things above here.)
+await setupServiceWorker()
+const repo = await setupRepo()
+establishMessageChannel(repo)
 
 // Put the repo and Automerge on the window.
 // Ideally we wouldn't do this but until we can import the same module from "inside the box"
@@ -71,39 +71,45 @@ window.process = {
   cwd: () => ".",
 }
 
-// Choose the initial module to load.
-const appUrl = new URLSearchParams(window.location.search).get("app") || PRECOOKED_BOOTSTRAP_DOC_URL
-console.log(`Booting from module at: ${appUrl}`)
+async function bootstrapApplication() {
+  // Choose the initial module to load.
+  const appUrl =
+    new URLSearchParams(window.location.search).get("app") || PRECOOKED_BOOTSTRAP_DOC_URL
+  console.log(`Booting from module at: ${appUrl}`)
 
-console.log("Applying import map...")
-window.esmsInitOptions = { shimMode: true, mapOverrides: true }
-await import("es-module-shims")
+  console.log("Applying import map...")
+  window.esmsInitOptions = { shimMode: true, mapOverrides: true }
+  await import("es-module-shims")
 
-// maybe this should be importmap.json for consistency but the key is the key
-const importMapPath = `./automerge-repo/${appUrl}/importMap`
-const importMapResponse = await fetch(importMapPath)
-const importMapJson = await importMapResponse.json()
-importShim.addImportMap(importMapJson)
+  // maybe this should be importmap.json for consistency but the key is the key
+  const importMapPath = `./automerge-repo/${appUrl}/importMap`
+  const importMapResponse = await fetch(importMapPath)
+  const importMapJson = await importMapResponse.json()
+  importShim.addImportMap(importMapJson)
 
-// Next, import the module (hosted out of the service worker)
-console.log("Importing...")
+  // Next, import the module (hosted out of the service worker)
+  console.log("Importing...")
 
-// this path relies on knowing how the serviceWorker works & how the import maps are created
-// there's probably a better way to model this
-const packageJsonPath = `./automerge-repo/${appUrl}/package.json`
-const packageJsonResponse = await fetch(packageJsonPath)
-const packageJsonJson = await packageJsonResponse.json()
+  // this path relies on knowing how the serviceWorker works & how the import maps are created
+  // there's probably a better way to model this
+  const packageJsonPath = `./automerge-repo/${appUrl}/package.json`
+  const packageJsonResponse = await fetch(packageJsonPath)
+  const packageJsonJson = await packageJsonResponse.json()
 
-const modulePath = `./automerge-repo/${appUrl}/fileContents/${packageJsonJson.module}`
-const moduleUrl = new URL(modulePath, window.location).toString()
-const rootModule = await importShim(moduleUrl)
-console.log("Module imported:", rootModule)
+  const modulePath = `./automerge-repo/${appUrl}/fileContents/${packageJsonJson.module}`
+  const moduleUrl = new URL(modulePath, window.location).toString()
+  const rootModule = await importShim(moduleUrl)
+  console.log("Module imported:", rootModule)
 
-// and now (at last) we can mount the module, passing in the URL params.
-if (!rootModule.mount) {
-  console.error("Root module doesn't export a mount function", rootModule)
+  // and now (at last) we can mount the module, passing in the URL params.
+  if (!rootModule.mount) {
+    console.error("Root module doesn't export a mount function", rootModule)
+  }
+
+  const urlParams = new URLSearchParams(window.location.search)
+  const params = Object.fromEntries(urlParams.entries())
+  rootModule.mount(document.getElementById("root"), params)
 }
 
-const urlParams = new URLSearchParams(window.location.search)
-const params = Object.fromEntries(urlParams.entries())
-rootModule.mount(document.getElementById("root"), params)
+await navigator.serviceWorker.ready
+bootstrapApplication()
