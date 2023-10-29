@@ -125,13 +125,13 @@ self.addEventListener("fetch", async (event) => {
           })
         }
 
+        // This is a bit of a hack but helps with JSPM looking for package.json
+        // at the root. It might actually not do that now I think about it.
         if (path[0] === "package.json") {
           return new Response(JSON.stringify(doc))
         }
 
-        // TODO: this should have error handling
         const subTree = path.reduce((acc, curr) => acc?.[curr], doc)
-
         if (!subTree) {
           return new Response(`Not found\nObject path: ${path}\n${JSON.stringify(doc, null, 2)}`, {
             status: 404,
@@ -145,9 +145,16 @@ self.addEventListener("fetch", async (event) => {
           })
         }
 
-        return new Response(`WHAT DO I DO????\n${path}\n${JSON.stringify(doc)}`, {
-          status: 500,
-          headers: { "Content-Type": "text/plain" },
+        // This doesn't work for a RawString...
+        // (Sorry if you're here because of that.)
+        if (typeof subTree === "string") {
+          return new Response(subTree, {
+            headers: { "Content-Type": "text/plain" },
+          })
+        }
+
+        return new Response(JSON.stringify(subTree), {
+          headers: { "Content-Type": "application/json" },
         })
       })()
     )

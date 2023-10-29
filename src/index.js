@@ -73,30 +73,28 @@ window.process = {
 
 // Choose the initial module to load.
 const appUrl = new URLSearchParams(window.location.search).get("app") || PRECOOKED_BOOTSTRAP_DOC_URL
-const appHandle = (window.appHandle = repo.find(appUrl))
 console.log(`Booting from module at: ${appUrl}`)
-
-// Load the document, then add the import map found inside.
-const doc = await appHandle.doc()
-if (!doc) {
-  throw new Error(`Failed to load ${appHandle.url}: ${appHandle.state}`)
-}
-
-let { importMap, name, module } = doc
-if (!importMap || !name || !module) {
-  throw new Error("Essential data missing from bootstrap document:", name, module, importMap)
-}
 
 console.log("Applying import map...")
 window.esmsInitOptions = { shimMode: true, mapOverrides: true }
 await import("es-module-shims")
-importShim.addImportMap(importMap)
+
+// maybe this should be importmap.json for consistency but the key is the key
+const importMapPath = `./automerge-repo/${appUrl}/importMap`
+const importMapResponse = await fetch(importMapPath)
+const importMapJson = await importMapResponse.json()
+importShim.addImportMap(importMapJson)
 
 // Next, import the module (hosted out of the service worker)
 console.log("Importing...")
+
 // this path relies on knowing how the serviceWorker works & how the import maps are created
 // there's probably a better way to model this
-const modulePath = `./automerge-repo/${appHandle.url}/fileContents/${module}`
+const packageJsonPath = `./automerge-repo/${appUrl}/package.json`
+const packageJsonResponse = await fetch(packageJsonPath)
+const packageJsonJson = await packageJsonResponse.json()
+
+const modulePath = `./automerge-repo/${appUrl}/fileContents/${packageJsonJson.module}`
 const moduleUrl = new URL(modulePath, window.location).toString()
 const rootModule = await importShim(moduleUrl)
 console.log("Module imported:", rootModule)
