@@ -5,7 +5,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
-const CACHE_NAME = "v1"
+const CACHE_NAME = "v2"
 const ASSETS_TO_CACHE = [
   "/",
   "/automerge_wasm_bg.wasm",
