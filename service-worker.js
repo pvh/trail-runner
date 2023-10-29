@@ -116,6 +116,7 @@ self.addEventListener("fetch", async (event) => {
         }
 
         const handle = (await repo).find(docUrl)
+        await handle.whenReady()
         const doc = await handle.doc()
 
         if (!doc) {
