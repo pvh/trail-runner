@@ -82,6 +82,13 @@ self.addEventListener("message", async (event) => {
   }
 })
 
+function addSyncServer(url) {
+  repo.then((repo) =>
+    repo.networkSubsystem.addNetworkAdapter(new BrowserWebSocketClientAdapter(url))
+  )
+}
+self.addSyncServer = addSyncServer
+
 async function clearOldCaches() {
   const cacheWhitelist = [CACHE_NAME]
   const cacheNames = await caches.keys()
