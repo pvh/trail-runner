@@ -84,8 +84,12 @@ async function bootstrapApplication() {
   // maybe this should be importmap.json for consistency but the key is the key
   const importMapPath = `./automerge-repo/${appUrl}/importMap`
   const importMapResponse = await fetch(importMapPath)
-  const importMapJson = await importMapResponse.json()
-  importShim.addImportMap(importMapJson)
+  if (importMapResponse.status == 200) {
+    const importMapJson = await importMapResponse.json()
+    importShim.addImportMap(importMapJson)
+  } else {
+    console.log("No import map found.")
+  }
 
   // Next, import the module (hosted out of the service worker)
   console.log("Importing...")
