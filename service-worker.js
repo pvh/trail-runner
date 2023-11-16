@@ -166,7 +166,7 @@ self.addEventListener("fetch", async (event) => {
         })
       })()
     )
-  } else {
+  } else if (event.request.method === 'GET' && url.origin === self.location.origin) {
     event.respondWith(
       (async () => {
         const r = await caches.match(event.request)
