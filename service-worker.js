@@ -5,7 +5,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
-const CACHE_NAME = "v3"
+const CACHE_NAME = "v4"
 const ASSETS_TO_CACHE = [
   "./",
   "./automerge_wasm_bg.wasm",
@@ -35,7 +35,7 @@ async function initializeRepo() {
   console.log("Creating repo")
   const repo = new Repo({
     storage: new IndexedDBStorageAdapter(),
-    network: [new BrowserWebSocketClientAdapter("ws://localhost:3030")],
+    network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
     peerId: "service-worker-" + Math.round(Math.random() * 1000000),
     sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
@@ -50,7 +50,7 @@ console.log("Before registration")
 const repo = initializeRepo()
 
 // put it on the global context for interactive use
-repo.then(r => {
+repo.then((r) => {
   self.repo = r
   self.Automerge = Automerge
 })
@@ -171,7 +171,7 @@ self.addEventListener("fetch", async (event) => {
         })
       })()
     )
-  } else if (event.request.method === 'GET' && url.origin === self.location.origin) {
+  } else if (event.request.method === "GET" && url.origin === self.location.origin) {
     event.respondWith(
       (async () => {
         const r = await caches.match(event.request)
