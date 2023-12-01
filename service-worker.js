@@ -5,31 +5,7 @@ import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-index
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
-const CACHE_NAME = "v4"
-const ASSETS_TO_CACHE = [
-  "./",
-  "./automerge_wasm_bg.wasm",
-  "./es-module-shims.js",
-  "./favicon.ico",
-  "./index.html",
-  "./index.js",
-  "./main.js",
-  "./src/vendor/automerge-wasm/web/automerge_wasm_bg.js",
-  "./src/vendor/automerge-wasm/web/automerge_wasm_bg.wasm",
-  "./src/vendor/automerge-wasm/web/automerge_wasm.js",
-  "./src/vendor/automerge-wasm/web/index.js",
-  "./src/vendor/automerge-wasm/package.json",
-  "./logos/logo-favicon-16x16.png",
-  "./logos/logo-favicon-32x32.png",
-  "./logos/logo-favicon-64x64.png",
-  "./logos/logo-favicon-96x96.png",
-  "./logos/logo-favicon-128x128.png",
-  "./logos/logo-favicon-192x192.png",
-  "./logos/logo-favicon-196x196.png",
-  "./logos/logo-favicon-310x310-transparent.png",
-  "./logos/logo-favicon-apple-touch.png",
-  "./logos/logo-lockup.svg",
-]
+const CACHE_NAME = "v5"
 
 async function initializeRepo() {
   console.log("Creating repo")
@@ -60,21 +36,7 @@ repo.then((r) => {
 
 self.addEventListener("install", (event) => {
   console.log("Installing SW")
-  event.waitUntil(
-    Promise.all([
-      caches.open(CACHE_NAME).then(async (cache) => {
-        for (let i of ASSETS_TO_CACHE) {
-          try {
-            console.log("sw: cache.add", i)
-            const ok = await cache.add(i)
-          } catch (err) {
-            console.warn("sw: cache.add", err)
-          }
-        }
-        // cache.addAll(ASSETS_TO_CACHE)
-      }),
-    ]).then(() => self.skipWaiting())
-  )
+  self.skipWaiting()
 })
 
 self.addEventListener("message", async (event) => {
