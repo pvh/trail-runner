@@ -43,12 +43,6 @@ function establishMessageChannel(repo) {
   navigator.serviceWorker.controller.postMessage({ type: "INIT_PORT" }, [messageChannel.port2])
 }
 
-// Re-establish the MessageChannel if the controlling service worker changes
-navigator.serviceWorker.oncontrollerchange = function () {
-  console.log("Controller changed!")
-  establishMessageChannel(repo)
-}
-
 // (Actually do the things above here.)
 await setupServiceWorker()
 const repo = await setupRepo()
@@ -69,6 +63,12 @@ window.process = {
   versions: {},
   stderr: {},
   cwd: () => ".",
+}
+
+// Re-establish the MessageChannel if the controlling service worker changes
+navigator.serviceWorker.oncontrollerchange = function () {
+  console.log("Controller changed!")
+  establishMessageChannel(repo)
 }
 
 async function bootstrapApplication() {
