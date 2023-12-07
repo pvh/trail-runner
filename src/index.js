@@ -115,7 +115,7 @@ async function bootstrapApplication() {
     console.warn(`No package.json found in this document (carrying on).`)
   }
 
-  const modulePath = `./automerge-repo/${appUrl}/fileContents/${packageJsonJson.module}`
+  const modulePath = `./automerge-repo/${appUrl}/fileContents/${entryFile}`
   const moduleUrl = new URL(modulePath, window.location).toString()
   const rootModule = await importShim(moduleUrl)
   console.log("Module imported:", rootModule)
