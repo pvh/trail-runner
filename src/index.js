@@ -88,7 +88,10 @@ async function bootstrapApplication() {
     const importMapJson = await importMapResponse.json()
     importShim.addImportMap(importMapJson)
   } else {
-    console.log("No import map found.")
+    console.warn(
+      `No import map found in this document (carrying on).
+      If you have dependencies, you'll see that they can't be loaded in a moment.`
+    )
   }
 
   // Next, import the module (hosted out of the service worker)
@@ -98,7 +101,19 @@ async function bootstrapApplication() {
   // there's probably a better way to model this
   const packageJsonPath = `./automerge-repo/${appUrl}/package.json`
   const packageJsonResponse = await fetch(packageJsonPath)
-  const packageJsonJson = await packageJsonResponse.json()
+
+  let entryFile = "index.js"
+  if (importMapResponse.status == 200) {
+    const packageJsonJson = await packageJsonResponse.json()
+    if (packageJsonJson?.module) {
+      entryFile = packageJsonJson.module
+    }
+    if (!packageJsonJson.module) {
+      console.warn(`package.json without "module": defaulting to index.js`, packageJsonJson)
+    }
+  } else {
+    console.warn(`No package.json found in this document (carrying on).`)
+  }
 
   const modulePath = `./automerge-repo/${appUrl}/fileContents/${packageJsonJson.module}`
   const moduleUrl = new URL(modulePath, window.location).toString()
