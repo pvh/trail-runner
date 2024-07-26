@@ -1,23 +1,21 @@
-import * as AutomergeWasm from "@automerge/automerge-wasm"
-import * as Automerge from "@automerge/automerge"
-import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
-import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
-import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
-import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
+// The ?bundle-deps here is very dodgy...
+import * as AR from "https://esm.sh/@automerge/automerge-repo@2.0.0-alpha.1/slim?bundle-deps"
+import { BrowserWebSocketClientAdapter } from "https://esm.sh/@automerge/automerge-repo-network-websocket@2.0.0-alpha.1?bundle-deps"
+import { IndexedDBStorageAdapter } from "https://esm.sh/@automerge/automerge-repo-storage-indexeddb@2.0.0-alpha.1"
+import { MessageChannelNetworkAdapter } from "https://esm.sh/@automerge/automerge-repo-network-messagechannel@2.0.0-alpha.1?bundle-deps"
 
 const CACHE_NAME = "v6"
 
 async function initializeRepo() {
+  await AR.initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.7/dist/automerge.wasm"))
+
   console.log("Creating repo")
-  const repo = new Repo({
+  const repo = new AR.Repo({
     storage: new IndexedDBStorageAdapter(),
     network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
     peerId: "service-worker-" + Math.round(Math.random() * 1000000),
     sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
-
-  await AutomergeWasm.promise
-  Automerge.use(AutomergeWasm)
 
   return repo
 }
@@ -28,7 +26,6 @@ const repo = initializeRepo()
 // put it on the global context for interactive use
 repo.then((r) => {
   self.repo = r
-  self.Automerge = Automerge
 })
 
 // return a promise from this so that we can wait on it before returning fetch/addNetworkAdapter
@@ -82,7 +79,7 @@ self.addEventListener("fetch", async (event) => {
       (async () => {
         let [docUrl, ...path] = match[1].split("/")
 
-        if (!isValidAutomergeUrl(docUrl)) {
+        if (!AR.isValidAutomergeUrl(docUrl)) {
           return new Response(`Invalid Automerge URL\n${docUrl}`, {
             status: 500,
             headers: { "Content-Type": "text/plain" },
@@ -133,7 +130,7 @@ self.addEventListener("fetch", async (event) => {
         })
       })()
     )
-  } else if (event.request.method === "GET" && url.origin === self.location.origin) {
+  } /* else if (event.request.method === "GET" && url.origin === self.location.origin) {
     event.respondWith(
       (async () => {
         const r = await caches.match(event.request)
@@ -148,5 +145,5 @@ self.addEventListener("fetch", async (event) => {
         return response
       })()
     )
-  }
+  } */
 })

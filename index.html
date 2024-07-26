@@ -1,7 +1,28 @@
 <!DOCTYPE html>
 <html>
-  <link rel="icon" type="image/png" href="/favicon.ico" />
-  <link rel="manifest" href="/app.webmanifest" crossorigin="use-credentials" />
-  <script type="module" src="./src/index.js"></script>
-  <div id="root">Standby for launch...</div>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/png" href="/favicon.ico" />
+    <title>Trail-Runner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="manifest" href="/app.webmanifest" crossorigin="use-credentials" />
+  </head>
+  <body>
+    <!-- ES Module Shims import maps polyfills -->
+    <script>
+      window.esmsInitOptions = {
+        polyfillEnable: ["css-modules", "json-modules", "wasm-modules"],
+        shimMode: true,
+        mapOverrides: true,
+      }
+    </script>
+    <script
+      async
+      src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <script type="module" src="./index.js"></script>
+    <div id="root">Loading initial document...</div>
+  </body>
 </html>
