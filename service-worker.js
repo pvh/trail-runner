@@ -1,6 +1,7 @@
-import * as AutomergeWasm from "@automerge/automerge-wasm"
-import * as Automerge from "@automerge/automerge"
-import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo"
+import wasmUrl from "@automerge/automerge/automerge.wasm?url";
+import { next as Automerge } from "@automerge/automerge/slim";
+import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo/slim";
+
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
@@ -8,6 +9,8 @@ import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-
 const CACHE_NAME = "v6"
 
 async function initializeRepo() {
+  await Automerge.initializeWasm(wasmUrl)
+
   console.log("Creating repo")
   const repo = new Repo({
     storage: new IndexedDBStorageAdapter(),
@@ -16,8 +19,9 @@ async function initializeRepo() {
     sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
 
-  await AutomergeWasm.promise
-  Automerge.use(AutomergeWasm)
+  // ehhhh
+  self.Automerge = Automerge
+  self.repo = repo
 
   return repo
 }
@@ -100,13 +104,13 @@ self.addEventListener("fetch", async (event) => {
           })
         }
 
-        // This is a bit of a hack but helps with JSPM looking for package.json
-        // at the root. It might actually not do that now I think about it.
-        if (path[0] === "package.json") {
-          return new Response(JSON.stringify(doc))
-        }
-
-        const subTree = path.reduce((acc, curr) => acc?.[curr], doc)
+        const subTree = await path.reduce(async (acc, curr) => {
+          const target = acc?.[curr]
+          if (isValidAutomergeUrl(target)) {
+            await repo.find(target).doc()
+          }
+          return target
+        }, doc)
         if (!subTree) {
           return new Response(`Not found\nObject path: ${path}\n${JSON.stringify(doc, null, 2)}`, {
             status: 404,

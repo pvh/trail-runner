@@ -1,6 +1,8 @@
-import * as Automerge from "@automerge/automerge"
-import * as AutomergeWasm from "@automerge/automerge-wasm"
-import { Repo } from "@automerge/automerge-repo"
+import wasmUrl from "@automerge/automerge/automerge.wasm?url";
+import { next as Automerge } from "@automerge/automerge/slim";
+import { Repo } from "@automerge/automerge-repo/slim";
+await Automerge.initializeWasm(wasmUrl)
+
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
 
@@ -16,9 +18,6 @@ async function setupServiceWorker() {
 
 // Then set up an automerge repo (loading with our annoying WASM hack)
 async function setupRepo() {
-  await AutomergeWasm.promise
-  Automerge.use(AutomergeWasm)
-
   // no network, no storage... not yet.
   const repo = new Repo({
     storage: new IndexedDBStorageAdapter(),
@@ -99,7 +98,7 @@ async function bootstrapApplication() {
 
   // this path relies on knowing how the serviceWorker works & how the import maps are created
   // there's probably a better way to model this
-  const packageJsonPath = `./automerge-repo/${appUrl}/package.json`
+  const packageJsonPath = `./automerge-repo/${appUrl}/fileContents/package.json`
   const packageJsonResponse = await fetch(packageJsonPath)
 
   let entryFile = "index.js"

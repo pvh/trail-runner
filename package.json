@@ -16,15 +16,12 @@
     "vite": "^4.4.9"
   },
   "dependencies": {
-    "@automerge/automerge": "^2.1.8",
-    "@automerge/automerge-repo": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-network-broadcastchannel": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-network-messagechannel": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-network-websocket": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-storage-indexeddb": "^1.1.0-alpha.5",
+    "@automerge/automerge": "^2.2.8",
+    "@automerge/automerge-repo": "^2.0.0-alpha.14",
+    "@automerge/automerge-repo-network-broadcastchannel": "^2.0.0-alpha.14",
+    "@automerge/automerge-repo-network-messagechannel": "^2.0.0-alpha.14",
+    "@automerge/automerge-repo-network-websocket": "^2.0.0-alpha.14",
+    "@automerge/automerge-repo-storage-indexeddb": "^2.0.0-alpha.14",
     "es-module-shims": "^1.8.0"
-  },
-  "resolutions": {
-    "@automerge/automerge-wasm": "file:./src/vendor/automerge-wasm"
   }
 }
