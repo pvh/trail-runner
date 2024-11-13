@@ -77,6 +77,7 @@ self.addEventListener("activate", async (event) => {
   clients.claim()
 })
 
+
 self.addEventListener("fetch", async (event) => {
   const url = new URL(event.request.url)
 
@@ -111,19 +112,117 @@ self.addEventListener("fetch", async (event) => {
           })
         }
 
-        const subTree = await path.reduce(async (acc, curr) => {
-          const target = (await acc)?.[curr]
-          if (isValidAutomergeUrl(target)) {
-            await repo.find(target).doc()
-          }
-          return target
-        }, doc)
+        // XXX FIXME: we assume a patchwork style folder if we find .docs
+        /* those look like this:
+        {
+          "changeGroupSummaries": {
+
+          },
+          "discussions": {
+
+          },
+          "docs": [
+            {
+              "name": "assets",
+              "type": "folder",
+              "url": "automerge:stKjMo9D8hfaC3RNvJj6c9JKSb4"
+            },
+            {
+              "name": "index.html",
+              "type": "file",
+              "url": "automerge:zVKpohNdaogd6aiLaXTi1PNTtqR"
+            },
+            {
+              "name": "jacquard.json",
+              "type": "file",
+              "url": "automerge:3zTXsS7vKZxo7jCQhJze28H9neQW"
+            },
+            {
+              "name": "vite.svg",
+              "type": "file",
+              "url": "automerge:uNBVQRAMCtnY5BWT2Qvue6hXzNu"
+            }
+          ],
+          "tags": [],
+          "title": "dist",
+          "versionControlMetadataUrl": "automerge:3NKxZb1NKEQq46WqGGGs7bTXc84o"
+        }
+          */
+
+        let subTree
+
+        if (doc.docs) {
+          subTree = await path.reduce(async (acc, curr) => {
+            let target = (await acc)?.docs?.find((doc) => doc.name === curr)
+
+            if (isValidAutomergeUrl(target?.url)) {
+              target = await (await repo).find(target.url).doc()
+            }
+            return target
+          }, doc)
+        } else {
+          subTree = await path.reduce(async (acc, curr) => {
+            let target = (await acc)?.[curr]
+            if (isValidAutomergeUrl(target)) {
+              target = await (await repo).find(target).doc()
+            }
+            return target
+          }, doc)
+        }
+
         if (!subTree) {
           return new Response(`Not found\nObject path: ${path}\n${JSON.stringify(doc, null, 2)}`, {
             status: 404,
             headers: { "Content-Type": "text/plain" },
           })
         }
+
+        /* More Jacquard compatibility silliness */
+        /* We want to return the contents of this as a response:
+        {
+          "content": {
+            "type": "link",
+            "url": "https://storage.googleapis.com/jacquard/8bbb766aa7309f465ff15398a03885c03527e83ec5b3716a33985e23d4584783"
+          },
+          "name": "index.html",
+          "type": "html"
+        }
+        */
+        if (subTree?.content?.type === "link") {
+          // we need to handle fetching this from behind the scenes to maintain the path
+          const response = await fetch(subTree.content.url)
+          // return a response that makes this feel like it came from the same origin but works for html, pngs, etc
+          return new Response(response.body, {
+            headers: { "Content-Type": response.headers.get("Content-Type") },
+          })
+        } else if (subTree?.content) {
+          /*
+          {
+            "content": {
+              "type": "text",
+              "value": "Hello world..."
+            },
+            "name": "react-CHdo91hT.svg",
+            "type": "svg"
+          }
+          */
+          // the mimetype isn't actually here so we need to guess it based on the type field
+          const mimeType = {
+            "svg": "image/svg+xml",
+            "html": "text/html",
+            "json": "application/json",
+            "js": "application/javascript",
+            "css": "text/css",
+            "md": "text/markdown",
+            "txt": "text/plain",
+            "": "text/plain"
+          }[subTree.type]
+
+          return new Response(subTree.content.value, {
+            headers: { "Content-Type": mimeType }
+          })
+        }
+
 
         if (subTree.contentType) {
           return new Response(subTree.contents, {
