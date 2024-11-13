@@ -98,7 +98,7 @@ async function bootstrapApplication() {
 
   // this path relies on knowing how the serviceWorker works & how the import maps are created
   // there's probably a better way to model this
-  const packageJsonPath = `./automerge-repo/${appUrl}/fileContents/package.json`
+  const packageJsonPath = `./automerge-repo/${appUrl}/package.json`
   const packageJsonResponse = await fetch(packageJsonPath)
 
   let entryFile = "index.js"

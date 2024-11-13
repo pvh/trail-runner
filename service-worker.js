@@ -104,8 +104,15 @@ self.addEventListener("fetch", async (event) => {
           })
         }
 
+        /* todo: remove this special case */
+        if(path[0] === "package.json") {
+          return new Response(JSON.stringify(doc), {
+            headers: { "Content-Type": "application/json" },
+          })
+        }
+
         const subTree = await path.reduce(async (acc, curr) => {
-          const target = acc?.[curr]
+          const target = (await acc)?.[curr]
           if (isValidAutomergeUrl(target)) {
             await repo.find(target).doc()
           }
@@ -148,7 +155,7 @@ self.addEventListener("fetch", async (event) => {
         const response = await fetch(event.request)
         const cache = await caches.open(CACHE_NAME)
         console.log(`[Service Worker] Caching new resource: ${event.request.url}`)
-        cache.put(event.request, response.clone())
+        // cache.put(event.request, response.clone())
         return response
       })()
     )
