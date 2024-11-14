@@ -1,27 +1,20 @@
-import wasmUrl from "@automerge/automerge/automerge.wasm?url";
-import { next as Automerge } from "@automerge/automerge/slim";
-import { Repo } from "@automerge/automerge-repo/slim";
-await Automerge.initializeWasm(wasmUrl)
+import * as AR from "https://esm.sh/@automerge/automerge-repo@2.0.0-alpha.14/slim?bundle-deps"
+import { IndexedDBStorageAdapter } from "https://esm.sh/@automerge/automerge-repo-storage-indexeddb@2.0.0-alpha.14?bundle-deps"
+import { BrowserWebSocketClientAdapter } from "https://esm.sh/@automerge/automerge-repo-network-websocket@2.0.0-alpha.14?bundle-deps"
+import { MessageChannelNetworkAdapter } from "https://esm.sh/@automerge/automerge-repo-network-messagechannel@2.0.0-alpha.14?bundle-deps"
 
-import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
-import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
+await AR.initializeWasm(
+  fetch("https://esm.sh/@automerge/automerge@2.2.8/dist/automerge.wasm")
+)
 
 const PRECOOKED_BOOTSTRAP_DOC_URL = "automerge:2sbkVLjmSqdXqyP7XeFeY3ujMzub"
-
-// First, spawn the serviceworker.
-async function setupServiceWorker() {
-  const registration = await navigator.serviceWorker.register("service-worker.js", {
-    type: "module",
-  })
-  console.log("ServiceWorker registration successful with scope:", registration.scope)
-}
 
 // Then set up an automerge repo (loading with our annoying WASM hack)
 async function setupRepo() {
   // no network, no storage... not yet.
-  const repo = new Repo({
+  const repo = new AR.Repo({
     storage: new IndexedDBStorageAdapter(),
-    network: [],
+    network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
     peerId: "frontend-" + Math.round(Math.random() * 10000),
     sharePolicy: async (peerId) => peerId.includes("service-worker"),
   })
@@ -29,6 +22,7 @@ async function setupRepo() {
   return repo
 }
 
+/*
 // Now introduce the two to each other. This frontend takes advantage of loaded state in the SW.
 function establishMessageChannel(repo) {
   if (!navigator.serviceWorker.controller) {
@@ -40,18 +34,18 @@ function establishMessageChannel(repo) {
   const messageChannel = new MessageChannel()
   repo.networkSubsystem.addNetworkAdapter(new MessageChannelNetworkAdapter(messageChannel.port1))
   navigator.serviceWorker.controller.postMessage({ type: "INIT_PORT" }, [messageChannel.port2])
-}
+}*/
 
 // (Actually do the things above here.)
-await setupServiceWorker()
+// await setupServiceWorker()
 const repo = await setupRepo()
-establishMessageChannel(repo)
+// establishMessageChannel(repo)
 
 // Put the repo and Automerge on the window.
 // Ideally we wouldn't do this but until we can import the same module from "inside the box"
 // this prevents us from creating doppelganger imports and dealing with all the wasm nonsense.
 window.repo = repo
-window.Automerge = window.automerge = Automerge
+// window.Automerge = window.automerge = Automerge
 
 // We establish a faux window.process object to improve support for
 // some packages that test for a node environment but don't actually require one.
@@ -65,10 +59,12 @@ window.process = {
 }
 
 // Re-establish the MessageChannel if the controlling service worker changes
+/*
 navigator.serviceWorker.oncontrollerchange = function () {
   console.log("Controller changed!")
   establishMessageChannel(repo)
 }
+*/
 
 async function bootstrapApplication() {
   // Choose the initial module to load.
@@ -78,7 +74,7 @@ async function bootstrapApplication() {
 
   console.log("Applying import map...")
   window.esmsInitOptions = { shimMode: true, mapOverrides: true }
-  await import("es-module-shims")
+  await import("https://esm.sh/es-module-shims@1.10.1")
 
   // maybe this should be importmap.json for consistency but the key is the key
   const importMapPath = `./automerge-repo/${appUrl}/importMap`
