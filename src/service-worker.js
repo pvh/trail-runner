@@ -1,18 +1,15 @@
-import wasmUrl from "@automerge/automerge/automerge.wasm?url"
-import { next as Automerge } from "@automerge/automerge/slim"
-import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo/slim"
-
-import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
-import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
-import { MessageChannelNetworkAdapter } from "@automerge/automerge-repo-network-messagechannel"
+import * as AR from "https://esm.sh/@automerge/automerge-repo@2.0.0-alpha.14/slim?bundle-deps"
+import { IndexedDBStorageAdapter } from "https://esm.sh/@automerge/automerge-repo-storage-indexeddb@2.0.0-alpha.14?bundle-deps"
+import { BrowserWebSocketClientAdapter } from "https://esm.sh/@automerge/automerge-repo-network-websocket@2.0.0-alpha.14?bundle-deps"
+import { MessageChannelNetworkAdapter } from "https://esm.sh/@automerge/automerge-repo-network-messagechannel@2.0.0-alpha.14?bundle-deps"
 
 const CACHE_NAME = "v6"
 
 async function initializeRepo() {
-  await Automerge.initializeWasm(wasmUrl)
+  await AR.initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.8/dist/automerge.wasm"))
 
   console.log("Creating repo")
-  const repo = new Repo({
+  const repo = new AR.Repo({
     storage: new IndexedDBStorageAdapter(),
     network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
     peerId: "service-worker-" + Math.round(Math.random() * 1000000),
@@ -20,7 +17,8 @@ async function initializeRepo() {
   })
 
   // ehhhh
-  self.Automerge = Automerge
+  // self.Automerge = Automerge
+  self.AR = AR
   self.repo = repo
 
   return repo
@@ -32,7 +30,7 @@ const repo = initializeRepo()
 // put it on the global context for interactive use
 repo.then((r) => {
   self.repo = r
-  self.Automerge = Automerge
+  // self.Automerge = Automerge
 })
 
 // return a promise from this so that we can wait on it before returning fetch/addNetworkAdapter
@@ -86,7 +84,7 @@ self.addEventListener("fetch", async (event) => {
       (async () => {
         let [docUrl, ...path] = match[1].split("/")
 
-        if (!isValidAutomergeUrl(docUrl)) {
+        if (!AR.isValidAutomergeUrl(docUrl)) {
           return new Response(`Invalid Automerge URL\n${docUrl}`, {
             status: 500,
             headers: { "Content-Type": "text/plain" },
@@ -154,7 +152,7 @@ self.addEventListener("fetch", async (event) => {
           subTree = await path.reduce(async (acc, curr) => {
             let target = (await acc)?.docs?.find((doc) => doc.name === curr)
 
-            if (isValidAutomergeUrl(target?.url)) {
+            if (AR.isValidAutomergeUrl(target?.url)) {
               target = await (await repo).find(target.url).doc()
             }
             return target
@@ -162,7 +160,7 @@ self.addEventListener("fetch", async (event) => {
         } else {
           subTree = await path.reduce(async (acc, curr) => {
             let target = (await acc)?.[curr]
-            if (isValidAutomergeUrl(target)) {
+            if (AR.isValidAutomergeUrl(target)) {
               target = await (await repo).find(target).doc()
             }
             return target

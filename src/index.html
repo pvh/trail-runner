@@ -1,8 +1,55 @@
 <!DOCTYPE html>
 <html>
   <link rel="icon" type="image/png" href="/favicon.ico" />
-  <link rel="manifest" href="/app.webmanifest" crossorigin="use-credentials" />
+  <link rel="manifest" href="./app.webmanifest" crossorigin="use-credentials" />
+  <style type="text/css">
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
 
-  <script type="module" src="./index.js"></script>
-  <div id="root">Standby for launch...</div>
+    #content {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: 0px;
+    }
+  </style>
+  <div id="content">
+    <iframe id="rootIFrame" width="100%" height="100%" frameborder="0" src=""></iframe>
+  </div>
+
+  <script>
+    // Function to load the iframe
+    function loadIframe() {
+      var iframe = document.getElementById('rootIFrame');
+      const input = window.location.hash.substring(1);
+      if (input.startsWith("automerge:")) {
+        iframe.src = "./automerge-repo/" + window.location.hash.substring(1);
+      }
+      else {
+        console.warn("Need an automerge URL with path in the location hash."); 
+      }
+    }
+
+    // Register the service worker
+    navigator.serviceWorker.register('./service-worker.js', {type: 'module'})
+      .then(function(registration) {
+        if (navigator.serviceWorker.controller) {
+          loadIframe();
+        } else {
+          navigator.serviceWorker.addEventListener('controllerchange', function() {
+            loadIframe();
+          });
+        }
+      })
+      .catch(function(error) {
+        console.log('Service Worker registration failed:', error);
+      });
+  </script>
+</body>
 </html>
