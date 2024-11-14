@@ -1,6 +1,6 @@
-import wasmUrl from "@automerge/automerge/automerge.wasm?url";
-import { next as Automerge } from "@automerge/automerge/slim";
-import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo/slim";
+import wasmUrl from "@automerge/automerge/automerge.wasm?url"
+import { next as Automerge } from "@automerge/automerge/slim"
+import { Repo, isValidAutomergeUrl } from "@automerge/automerge-repo/slim"
 
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb"
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket"
@@ -77,7 +77,6 @@ self.addEventListener("activate", async (event) => {
   clients.claim()
 })
 
-
 self.addEventListener("fetch", async (event) => {
   const url = new URL(event.request.url)
 
@@ -106,7 +105,7 @@ self.addEventListener("fetch", async (event) => {
         }
 
         /* todo: remove this special case */
-        if(path[0] === "package.json") {
+        if (path[0] === "package.json") {
           return new Response(JSON.stringify(doc), {
             headers: { "Content-Type": "application/json" },
           })
@@ -208,21 +207,20 @@ self.addEventListener("fetch", async (event) => {
           */
           // the mimetype isn't actually here so we need to guess it based on the type field
           const mimeType = {
-            "svg": "image/svg+xml",
-            "html": "text/html",
-            "json": "application/json",
-            "js": "application/javascript",
-            "css": "text/css",
-            "md": "text/markdown",
-            "txt": "text/plain",
-            "": "text/plain"
+            svg: "image/svg+xml",
+            html: "text/html",
+            json: "application/json",
+            js: "application/javascript",
+            css: "text/css",
+            md: "text/markdown",
+            txt: "text/plain",
+            "": "text/plain",
           }[subTree.type]
 
           return new Response(subTree.content.value, {
-            headers: { "Content-Type": mimeType }
+            headers: { "Content-Type": mimeType },
           })
         }
-
 
         if (subTree.contentType) {
           return new Response(subTree.contents, {
