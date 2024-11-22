@@ -78,6 +78,7 @@ self.addEventListener("activate", async (event) => {
 self.addEventListener("fetch", async (event) => {
   const url = new URL(event.request.url)
 
+  // consider: $YOUR_DEPLOY/automerge-repo/automerge:fasdfasdfasdf/assets/index.js (for example)
   const match = url.pathname.match(new RegExp("^.*/automerge-repo/(automerge:.*)"))
   if (match) {
     event.respondWith(
@@ -213,6 +214,8 @@ self.addEventListener("fetch", async (event) => {
             md: "text/markdown",
             txt: "text/plain",
             "": "text/plain",
+            png: "image/png",
+            jpg: "image/jpeg",
           }[subTree.type]
 
           return new Response(subTree.content.value, {
