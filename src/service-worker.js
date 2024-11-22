@@ -5,6 +5,27 @@ import { MessageChannelNetworkAdapter } from "https://esm.sh/@automerge/automerg
 
 const CACHE_NAME = "v6"
 
+async function fetchDNSTXTRecords(domain) {
+  const response = await fetch(`https://dns.google/resolve?name=${domain}&type=TXT`)
+  const data = await response.json()
+  if (data.Answer) {
+    return data.Answer.map((answer) => answer.data)
+  } else {
+    console.log("No TXT records found:", data.Comment)
+    return []
+  }
+}
+
+async function resolveDomain(domain) {
+  const txtRecords = await fetchDNSTXTRecords(`_automerge.${domain}`)
+  for (const record of txtRecords) {
+    if (record.startsWith("automerge:")) {
+      return record // Extract URL inside quotes
+    }
+  }
+  return null // No valid automergeURL found
+}
+
 async function initializeRepo() {
   await AR.initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.8/dist/automerge.wasm"))
 
@@ -16,8 +37,6 @@ async function initializeRepo() {
     sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
 
-  // ehhhh
-  // self.Automerge = Automerge
   self.AR = AR
   self.repo = repo
 
@@ -27,14 +46,20 @@ async function initializeRepo() {
 console.log("Before registration")
 const repo = initializeRepo()
 
-// put it on the global context for interactive use
 repo.then((r) => {
   self.repo = r
-  // self.Automerge = Automerge
 })
 
-// return a promise from this so that we can wait on it before returning fetch/addNetworkAdapter
-// because otherwise we might not have the WASM module loaded before we get to work.
+async function clearOldCaches() {
+  const cacheWhitelist = [CACHE_NAME]
+  const cacheNames = await caches.keys()
+  const deletePromises = cacheNames.map((cacheName) => {
+    if (!cacheWhitelist.includes(cacheName)) {
+      return caches.delete(cacheName)
+    }
+  })
+  await Promise.all(deletePromises)
+}
 
 self.addEventListener("install", (event) => {
   console.log("Installing SW")
@@ -58,17 +83,6 @@ function addSyncServer(url) {
 }
 self.addSyncServer = addSyncServer
 
-async function clearOldCaches() {
-  const cacheWhitelist = [CACHE_NAME]
-  const cacheNames = await caches.keys()
-  const deletePromises = cacheNames.map((cacheName) => {
-    if (!cacheWhitelist.includes(cacheName)) {
-      return caches.delete(cacheName)
-    }
-  })
-  await Promise.all(deletePromises)
-}
-
 self.addEventListener("activate", async (event) => {
   console.log("Activating service worker.")
   await clearOldCaches()
@@ -78,15 +92,15 @@ self.addEventListener("activate", async (event) => {
 self.addEventListener("fetch", async (event) => {
   const url = new URL(event.request.url)
 
-  // consider: $YOUR_DEPLOY/automerge-repo/automerge:fasdfasdfasdf/assets/index.js (for example)
-  const match = url.pathname.match(new RegExp("^.*/automerge-repo/(automerge:.*)"))
-  if (match) {
+  if (url.origin === location.origin) {
     event.respondWith(
       (async () => {
-        let [docUrl, ...path] = match[1].split("/")
+        let [_, docUrl, ...path] = url.pathname.split("/")
+        console.log(docUrl, path)
+        docUrl = docUrl.match(/^automerge:/) ? docUrl : await resolveDomain(docUrl)
 
         if (!AR.isValidAutomergeUrl(docUrl)) {
-          return new Response(`Invalid Automerge URL\n${docUrl}`, {
+          return new Response(`Invalid Automerge URL and no TXT record found for\n${docUrl}`, {
             status: 500,
             headers: { "Content-Type": "text/plain" },
           })
@@ -103,70 +117,24 @@ self.addEventListener("fetch", async (event) => {
           })
         }
 
-        /* todo: remove this special case */
-        if (path[0] === "package.json") {
-          return new Response(JSON.stringify(doc), {
-            headers: { "Content-Type": "application/json" },
-          })
-        }
+        let subTree = await path.reduce(async (acc, curr) => {
+          let current = await acc
 
-        // XXX FIXME: we assume a patchwork style folder if we find .docs
-        /* those look like this:
-        {
-          "changeGroupSummaries": {
+          // Try to resolve within `docs` if it exists
+          let target = current?.docs?.find((doc) => doc.name === curr)
 
-          },
-          "discussions": {
+          // Fall back to a direct property if `docs` resolution failed
+          if (!target) {
+            target = current?.[curr]
+          }
 
-          },
-          "docs": [
-            {
-              "name": "assets",
-              "type": "folder",
-              "url": "automerge:stKjMo9D8hfaC3RNvJj6c9JKSb4"
-            },
-            {
-              "name": "index.html",
-              "type": "file",
-              "url": "automerge:zVKpohNdaogd6aiLaXTi1PNTtqR"
-            },
-            {
-              "name": "jacquard.json",
-              "type": "file",
-              "url": "automerge:3zTXsS7vKZxo7jCQhJze28H9neQW"
-            },
-            {
-              "name": "vite.svg",
-              "type": "file",
-              "url": "automerge:uNBVQRAMCtnY5BWT2Qvue6hXzNu"
-            }
-          ],
-          "tags": [],
-          "title": "dist",
-          "versionControlMetadataUrl": "automerge:3NKxZb1NKEQq46WqGGGs7bTXc84o"
-        }
-          */
+          // If the target is an Automerge URL, resolve it
+          if (AR.isValidAutomergeUrl(target?.url || target)) {
+            target = await (await repo).find(target?.url || target).doc()
+          }
 
-        let subTree
-
-        if (doc.docs) {
-          subTree = await path.reduce(async (acc, curr) => {
-            let target = (await acc)?.docs?.find((doc) => doc.name === curr)
-
-            if (AR.isValidAutomergeUrl(target?.url)) {
-              target = await (await repo).find(target.url).doc()
-            }
-            return target
-          }, doc)
-        } else {
-          subTree = await path.reduce(async (acc, curr) => {
-            let target = (await acc)?.[curr]
-            if (AR.isValidAutomergeUrl(target)) {
-              target = await (await repo).find(target).doc()
-            }
-            return target
-          }, doc)
-        }
+          return target
+        }, doc)
 
         if (!subTree) {
           return new Response(`Not found\nObject path: ${path}\n${JSON.stringify(doc, null, 2)}`, {
@@ -240,21 +208,6 @@ self.addEventListener("fetch", async (event) => {
         return new Response(JSON.stringify(subTree), {
           headers: { "Content-Type": "application/json" },
         })
-      })()
-    )
-  } else if (event.request.method === "GET" && url.origin === self.location.origin) {
-    event.respondWith(
-      (async () => {
-        const r = await caches.match(event.request)
-        console.log(`[Service Worker] Fetching resource from cache: ${event.request.url}`)
-        if (r) {
-          return r
-        }
-        const response = await fetch(event.request)
-        const cache = await caches.open(CACHE_NAME)
-        console.log(`[Service Worker] Caching new resource: ${event.request.url}`)
-        // cache.put(event.request, response.clone())
-        return response
       })()
     )
   }
