@@ -26,6 +26,11 @@ async function resolveDomain(domain) {
   return null // No valid automergeURL found
 }
 
+function getBasePath() {
+  const serviceWorkerPath = self.location.pathname
+  return serviceWorkerPath.split("/").slice(0, -1).join("/") // Remove the filename
+}
+
 async function initializeRepo() {
   await AR.initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.8/dist/automerge.wasm"))
 
@@ -95,7 +100,21 @@ self.addEventListener("fetch", async (event) => {
   if (url.origin === location.origin) {
     event.respondWith(
       (async () => {
-        let [_, docUrl, ...path] = url.pathname.split("/")
+        const serviceWorkerPath = self.location.pathname // Path where the SW is registered
+        const registrationScope = serviceWorkerPath.split("/").slice(0, -1).join("/") + "/" // Base scope
+
+        const requestPath = new URL(event.request.url).pathname
+
+        // Get the path relative to the service worker's registration scope
+        const relativePath = requestPath.startsWith(registrationScope)
+          ? requestPath.slice(registrationScope.length)
+          : requestPath
+
+        console.log("Service Worker Scope:", registrationScope)
+        console.log("Request Path:", requestPath)
+        console.log("Relative Path:", relativePath)
+
+        let [docUrl, ...path] = relativePath.split("/")
         console.log(docUrl, path)
         docUrl = docUrl.match(/^automerge:/) ? docUrl : await resolveDomain(docUrl)
 
