@@ -89,125 +89,107 @@ self.addEventListener("activate", async (event) => {
   clients.claim()
 })
 
+const determinePath = (url) => {
+  const serviceWorkerPath = self.location.pathname // Path where the SW is registered
+  const registrationScope = serviceWorkerPath.split("/").slice(0, -1).join("/") + "/" // Base scope
+
+  const requestPath = new URL(url).pathname
+
+  // Get the path relative to the service worker's registration scope
+  const relativePath = requestPath.startsWith(registrationScope)
+    ? requestPath.slice(registrationScope.length)
+    : requestPath
+
+  return relativePath.split("/")
+}
+
+const descendPathStep = async (context, pathStep) => {
+  let target = context?.docs?.find((doc) => doc.name === pathStep)
+
+  if (!target) {
+    target = context?.[pathStep]
+  }
+
+  if (AR.isValidAutomergeUrl(target)) {
+    target = await repo.find(target).doc()
+  }
+
+  if (isValidTXTRecord(target)) {
+    target = await resolveDomain(target)
+  }
+
+  return target
+}
+
+const targetToResponse = async (target) => {
+  if (subTree?.content?.type === "link") {
+    // we need to handle fetching this from behind the scenes to maintain the path
+    const response = await fetch(subTree.content.url)
+    // return a response that makes this feel like it came from the same origin but works for html, pngs, etc
+    return new Response(response.body, {
+      headers: { "Content-Type": response.headers.get("Content-Type") },
+    })
+  } else if (subTree?.content) {
+    // the mimetype isn't actually here so we need to guess it based on the type field
+    const mimeType = {
+      svg: "image/svg+xml",
+      html: "text/html",
+      json: "application/json",
+      js: "application/javascript",
+      css: "text/css",
+      md: "text/markdown",
+      txt: "text/plain",
+      "": "text/plain",
+      png: "image/png",
+      jpg: "image/jpeg",
+    }[subTree.type]
+
+    return new Response(subTree.content.value, {
+      headers: { "Content-Type": mimeType },
+    })
+  }
+
+  if (target.contentType) {
+    return new Response(target.contents, {
+      headers: { "Content-Type": target.contentType },
+    })
+  }
+
+  if (typeof target === "string") {
+    return new Response(target, {
+      headers: { "Content-Type": "text/plain" },
+    })
+  }
+
+  return new Response(JSON.stringify(target), {
+    headers: { "Content-Type": "application/json" },
+  })
+}
+
 self.addEventListener("fetch", async (event) => {
   const url = new URL(event.request.url)
 
   if (url.origin === location.origin) {
     event.respondWith(
       (async () => {
-        let [_, docUrl, ...path] = url.pathname.split("/")
-        console.log(docUrl, path)
-        docUrl = docUrl.match(/^automerge:/) ? docUrl : await resolveDomain(docUrl)
+        let path = determinePath(url)
 
-        if (!AR.isValidAutomergeUrl(docUrl)) {
-          return new Response(`Invalid Automerge URL and no TXT record found for\n${docUrl}`, {
-            status: 500,
-            headers: { "Content-Type": "text/plain" },
-          })
-        }
-
-        const handle = (await repo).find(docUrl)
-        await handle.whenReady()
-        const doc = await handle.doc()
-
-        if (!doc) {
-          return new Response(`Document unavailable.\n${docUrl}: ${handle.state}`, {
-            status: 500,
-            headers: { "Content-Type": "text/plain" },
-          })
-        }
-
-        let subTree = await path.reduce(async (acc, curr) => {
-          let current = await acc
-
-          // Try to resolve within `docs` if it exists
-          let target = current?.docs?.find((doc) => doc.name === curr)
-
-          // Fall back to a direct property if `docs` resolution failed
+        let target
+        for (const pathStep of path) {
+          target = descendPathStep(await target, pathStep)
           if (!target) {
-            target = current?.[curr]
+            break
           }
+        }
 
-          // If the target is an Automerge URL, resolve it
-          if (AR.isValidAutomergeUrl(target?.url || target)) {
-            target = await (await repo).find(target?.url || target).doc()
-          }
-
-          return target
-        }, doc)
-
-        if (!subTree) {
-          return new Response(`Not found\nObject path: ${path}\n${JSON.stringify(doc, null, 2)}`, {
-            status: 404,
+        if (!target) {
+          return new Response(`The path couldn't be resolved to a valid document.`, {
+            status: 500,
             headers: { "Content-Type": "text/plain" },
           })
         }
 
-        /* More Jacquard compatibility silliness */
-        /* We want to return the contents of this as a response:
-        {
-          "content": {
-            "type": "link",
-            "url": "https://storage.googleapis.com/jacquard/8bbb766aa7309f465ff15398a03885c03527e83ec5b3716a33985e23d4584783"
-          },
-          "name": "index.html",
-          "type": "html"
-        }
-        */
-        if (subTree?.content?.type === "link") {
-          // we need to handle fetching this from behind the scenes to maintain the path
-          const response = await fetch(subTree.content.url)
-          // return a response that makes this feel like it came from the same origin but works for html, pngs, etc
-          return new Response(response.body, {
-            headers: { "Content-Type": response.headers.get("Content-Type") },
-          })
-        } else if (subTree?.content) {
-          /*
-          {
-            "content": {
-              "type": "text",
-              "value": "Hello world..."
-            },
-            "name": "react-CHdo91hT.svg",
-            "type": "svg"
-          }
-          */
-          // the mimetype isn't actually here so we need to guess it based on the type field
-          const mimeType = {
-            svg: "image/svg+xml",
-            html: "text/html",
-            json: "application/json",
-            js: "application/javascript",
-            css: "text/css",
-            md: "text/markdown",
-            txt: "text/plain",
-            "": "text/plain",
-            png: "image/png",
-            jpg: "image/jpeg",
-          }[subTree.type]
-
-          return new Response(subTree.content.value, {
-            headers: { "Content-Type": mimeType },
-          })
-        }
-
-        if (subTree.contentType) {
-          return new Response(subTree.contents, {
-            headers: { "Content-Type": subTree.contentType },
-          })
-        }
-
-        // This doesn't work for a RawString...
-        // (Sorry if you're here because of that.)
-        if (typeof subTree === "string") {
-          return new Response(subTree, {
-            headers: { "Content-Type": "text/plain" },
-          })
-        }
-
-        return new Response(JSON.stringify(subTree), {
-          headers: { "Content-Type": "application/json" },
-        })
+        return targetToResponse(target)
       })()
     )
   }
