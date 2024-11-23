@@ -2,20 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Page Not Found</title>
+    <title>Trail-Runner: Intercept</title>
     <script>
-      // Get the current path
-      const path = window.location.pathname
-      // Check if it's under your virtual directory (e.g., /app/)
-      if (path.startsWith("/automerge-repo/")) {
-        // Store the original path we wanted
-        sessionStorage.setItem("redirectPath", path)
-        // Redirect to index.html
-        window.location.href = "/index.html"
-      }
+      sessionStorage.setItem("redirectPath", window.location.href)
+      window.location.href = "/trail-runner/index.html"
     </script>
   </head>
   <body>
-    <p>TrailRunner offline, standby for redirect...</p>
+    <p>Trail-Runner offline, standby for redirect...</p>
   </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Loading...</title>
+    <title>Opening portal...</title>
     <script>
       function handleRedirect() {
         const redirectPath = sessionStorage.getItem("redirectPath")
@@ -22,7 +22,7 @@
           // Otherwise wait for a controller
           console.log("Waiting for service worker to take control...")
           navigator.serviceWorker
-            .register("/service-worker.js", { type: "module" })
+            .register("./service-worker.js", { type: "module" })
             .catch((err) => {
               console.log("ServiceWorker registration failed: ", err)
             })
@@ -36,7 +36,7 @@
     </script>
   </head>
   <body>
-    <h1>Loading...</h1>
-    <p>Waiting for service worker to take control...</p>
+    <h1>Trail-Runner: Booting...</h1>
+    <p>Standby for control of service worker...</p>
   </body>
 </html>
