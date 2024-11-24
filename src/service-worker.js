@@ -130,6 +130,7 @@ const resolveTarget = async (target) => {
   }
 
   if (AR.isValidAutomergeUrl(target)) {
+    await repoPromise // todo: ugh
     target = await repo.find(target).doc()
   }
 
