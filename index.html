@@ -25,6 +25,8 @@
             .register("./service-worker.js", { type: "module" })
             .catch((err) => {
               console.log("ServiceWorker registration failed: ", err)
+              document.body.innerHTML = `<h1>Trail-Runner proxy failed to load.</h1>
+              <p>If you're on Firefox, check this <a href="https://caniuse.com/mdn-api_serviceworker_ecmascript_modules">link</a> for more information and if Firefox is green now, <a href="mailto:pvh@pvh.ca">email me</a>.</p>`
             })
 
           navigator.serviceWorker.addEventListener("controllerchange", () => {
