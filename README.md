@@ -1,7 +1,7 @@
-# Trail Runner
-## Because boots were too heavy for moving fast.
+# Trail Runner 2.0
+## A boot-loader for a local-first web.
 
-This demonstration uses JSPM + Automerge-Repo for managing a dynamic loaded-on-demand importMap.
+This project creates a gateway to an Automerge-powered, local-first web. It allows your browser to load data out of Automerge documents as though they were stored on web servers using nothing but service-worker configured to fetch from the sync-server of your choice.
 
 ## A Tour
 
