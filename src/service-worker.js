@@ -5,27 +5,6 @@ import { MessageChannelNetworkAdapter } from "https://esm.sh/@automerge/automerg
 
 const CACHE_NAME = "v6"
 
-async function fetchDNSTXTRecords(domain) {
-  const response = await fetch(`https://dns.google/resolve?name=${domain}&type=TXT`)
-  const data = await response.json()
-  if (data.Answer) {
-    return data.Answer.map((answer) => answer.data)
-  } else {
-    console.log("No TXT records found:", data.Comment)
-    return []
-  }
-}
-
-async function resolveDomain(domain) {
-  const txtRecords = await fetchDNSTXTRecords(`_automerge.${domain}`)
-  for (const record of txtRecords) {
-    if (record.startsWith("automerge:")) {
-      return record // Extract URL inside quotes
-    }
-  }
-  return null // No valid automergeURL found
-}
-
 async function initializeRepo() {
   await AR.initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.8/dist/automerge.wasm"))
 
@@ -44,9 +23,8 @@ async function initializeRepo() {
 }
 
 console.log("Before registration")
-const repo = initializeRepo()
-
-repo.then((r) => {
+const repoPromise = initializeRepo()
+repoPromise.then((r) => {
   self.repo = r
 })
 
@@ -100,36 +78,73 @@ const determinePath = (url) => {
     ? requestPath.slice(registrationScope.length)
     : requestPath
 
-  return relativePath.split("/")
+  // Special case for expected web serer behavior
+  const candidatePath = relativePath.split("/")
+  if (candidatePath[candidatePath.length - 1] === "") {
+    candidatePath[candidatePath.length - 1] = "index.html"
+  }
+
+  return candidatePath
 }
 
-const descendPathStep = async (context, pathStep) => {
-  let target = context?.docs?.find((doc) => doc.name === pathStep)
+const descendPathStep = (context, pathStep) => {
+  let target = context?.docs?.find((doc) => doc.name === pathStep)?.url
 
   if (!target) {
     target = context?.[pathStep]
+  }
+
+  return target
+}
+
+const AT_DOMAIN_NAME_REGEX =
+  /^\@(((?!-))(xn--|_)?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$/
+function apparentDNSTXTRecord(domain) {
+  return typeof domain == "string" && domain.match(AT_DOMAIN_NAME_REGEX)
+}
+
+async function fetchDNSTXTRecords(domain) {
+  const response = await fetch(`https://dns.google/resolve?name=${domain}&type=TXT`)
+  const data = await response.json()
+  if (data.Answer) {
+    return data.Answer.map((answer) => answer.data)
+  } else {
+    console.log("No TXT records found:", data.Comment)
+    return []
+  }
+}
+
+async function resolveDNSTXTRecord(domain) {
+  const txtRecords = await fetchDNSTXTRecords(`_automerge.${domain.slice(1)}`)
+  for (const record of txtRecords) {
+    if (record.startsWith("automerge:")) {
+      return record // Extract URL inside quotes
+    }
+  }
+  return domain // No valid automergeURL found
+}
+
+const resolveTarget = async (target) => {
+  if (apparentDNSTXTRecord(target)) {
+    target = await resolveDNSTXTRecord(target)
   }
 
   if (AR.isValidAutomergeUrl(target)) {
     target = await repo.find(target).doc()
   }
 
-  if (isValidTXTRecord(target)) {
-    target = await resolveDomain(target)
-  }
-
   return target
 }
 
 const targetToResponse = async (target) => {
-  if (subTree?.content?.type === "link") {
+  if (target?.content?.type === "link") {
     // we need to handle fetching this from behind the scenes to maintain the path
-    const response = await fetch(subTree.content.url)
+    const response = await fetch(target.content.url)
     // return a response that makes this feel like it came from the same origin but works for html, pngs, etc
     return new Response(response.body, {
       headers: { "Content-Type": response.headers.get("Content-Type") },
     })
-  } else if (subTree?.content) {
+  } else if (target?.content) {
     // the mimetype isn't actually here so we need to guess it based on the type field
     const mimeType = {
       svg: "image/svg+xml",
@@ -142,9 +157,9 @@ const targetToResponse = async (target) => {
       "": "text/plain",
       png: "image/png",
       jpg: "image/jpeg",
-    }[subTree.type]
+    }[target.type]
 
-    return new Response(subTree.content.value, {
+    return new Response(target.content.value, {
       headers: { "Content-Type": mimeType },
     })
   }
@@ -172,15 +187,21 @@ self.addEventListener("fetch", async (event) => {
   if (url.origin === location.origin) {
     event.respondWith(
       (async () => {
-        let path = determinePath(url)
+        let [target, ...path] = determinePath(url)
+        path = path || []
 
-        let target
+        target = resolveTarget(target)
+
         for (const pathStep of path) {
-          target = descendPathStep(await target, pathStep)
+          target = await descendPathStep(await target, pathStep)
+          target = await resolveTarget(await target)
           if (!target) {
             break
           }
         }
+
+        // unwrap the promise at the end
+        target = await target
 
         if (!target) {
           return new Response(`The path couldn't be resolved to a valid document.`, {
