@@ -1,30 +1,14 @@
 {
   "name": "trail-runner",
-  "version": "0.0.1",
-  "description": "A prototype import-map loader.",
-  "main": "src/index.js",
+  "version": "0.0.2",
+  "description": "A boot-loader for a local-first web.",
   "scripts": {
-    "dev": "vite dev --port 3000",
-    "build": "vite build"
+    "dev": "serve src"
   },
   "author": "pvh@pvh.ca",
   "license": "MIT",
   "devDependencies": {
-    "jspm": "^3.0.1",
     "prettier": "^2.8.8",
-    "serve": "^14.2.0",
-    "vite": "^4.4.9"
-  },
-  "dependencies": {
-    "@automerge/automerge": "^2.1.8",
-    "@automerge/automerge-repo": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-network-broadcastchannel": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-network-messagechannel": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-network-websocket": "^1.1.0-alpha.5",
-    "@automerge/automerge-repo-storage-indexeddb": "^1.1.0-alpha.5",
-    "es-module-shims": "^1.8.0"
-  },
-  "resolutions": {
-    "@automerge/automerge-wasm": "file:./src/vendor/automerge-wasm"
+    "serve": "^14.2.0"
   }
 }
