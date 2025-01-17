@@ -147,24 +147,29 @@ const targetToResponse = async (target) => {
     })
   } else if (target?.content) {
     // the mimetype isn't actually here so we need to guess it based on the type field
-    const mimeType = {
-      svg: "image/svg+xml",
-      html: "text/html",
-      json: "application/json",
-      js: "application/javascript",
-      css: "text/css",
-      md: "text/markdown",
-      txt: "text/plain",
-      "": "text/plain",
-      png: "image/png",
-      jpg: "image/jpeg",
-    }[target.type]
+    const mimeType =
+      target.mimeType ||
+      {
+        svg: "image/svg+xml",
+        html: "text/html",
+        json: "application/json",
+        js: "application/javascript",
+        css: "text/css",
+        md: "text/markdown",
+        txt: "text/plain",
+        "": "text/plain",
+        png: "image/png",
+        jpg: "image/jpeg",
+      }[target.type]
 
-    return new Response(target.content.value, {
+    const content = target?.content?.value ? target.content.value : target.content
+
+    return new Response(content, {
       headers: { "Content-Type": mimeType },
     })
   }
 
+  // This is defunct, we just use mimeType and content now but support for old files is good
   if (target.contentType) {
     return new Response(target.contents, {
       headers: { "Content-Type": target.contentType },
