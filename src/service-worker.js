@@ -142,33 +142,6 @@ const resolveTarget = async (target) => {
 }
 
 const targetToResponse = async (target) => {
-  if (target?.content?.type === "link") {
-    // we need to handle fetching this from behind the scenes to maintain the path
-    const response = await fetch(target.content.url)
-    // return a response that makes this feel like it came from the same origin but works for html, pngs, etc
-    return new Response(response.body, {
-      headers: { "Content-Type": response.headers.get("Content-Type") },
-    })
-  } else if (target?.content) {
-    // the mimetype isn't actually here so we need to guess it based on the type field
-    const mimeType = {
-      svg: "image/svg+xml",
-      html: "text/html",
-      json: "application/json",
-      js: "application/javascript",
-      css: "text/css",
-      md: "text/markdown",
-      txt: "text/plain",
-      "": "text/plain",
-      png: "image/png",
-      jpg: "image/jpeg",
-    }[target.type]
-
-    return new Response(target.content.value, {
-      headers: { "Content-Type": mimeType },
-    })
-  }
-
   if (target.contentType) {
     return new Response(target.contents, {
       headers: { "Content-Type": target.contentType },
