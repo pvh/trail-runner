@@ -82,7 +82,7 @@ const determinePath = (url) => {
     ? requestPath.slice(registrationScope.length)
     : requestPath
 
-  // Special case for expected web serer behavior
+  // Special case for expected web server behavior
   const candidatePath = relativePath.split("/")
   if (candidatePath[candidatePath.length - 1] === "") {
     candidatePath[candidatePath.length - 1] = "index.html"
