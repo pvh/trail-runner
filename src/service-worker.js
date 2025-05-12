@@ -1,15 +1,19 @@
-import * as AR from "https://esm.sh/@automerge/automerge-repo@2.0.0-alpha.14/slim?bundle-deps"
-import { IndexedDBStorageAdapter } from "https://esm.sh/@automerge/automerge-repo-storage-indexeddb@2.0.0-alpha.14?bundle-deps"
-import { BrowserWebSocketClientAdapter } from "https://esm.sh/@automerge/automerge-repo-network-websocket@2.0.0-alpha.14?bundle-deps"
-import { MessageChannelNetworkAdapter } from "https://esm.sh/@automerge/automerge-repo-network-messagechannel@2.0.0-alpha.14?bundle-deps"
+import {
+  Repo,
+  initializeWasm,
+  isValidAutomergeUrl,
+  IndexedDBStorageAdapter,
+  BrowserWebSocketClientAdapter,
+  MessageChannelNetworkAdapter
+} from "https://esm.sh/@automerge/vanillajs@2.0.0-beta.6/slim?bundle-deps"
 
 const CACHE_NAME = "v6"
 
 async function initializeRepo() {
-  await AR.initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.8/dist/automerge.wasm"))
+  await initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.9/dist/automerge.wasm"))
 
   console.log("Creating repo")
-  const repo = new AR.Repo({
+  const repo = new Repo({
     storage: new IndexedDBStorageAdapter(),
     network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
     peerId: "service-worker-" + Math.round(Math.random() * 1000000),
@@ -129,7 +133,7 @@ const resolveTarget = async (target) => {
     target = await resolveDNSTXTRecord(target)
   }
 
-  if (AR.isValidAutomergeUrl(target)) {
+  if (isValidAutomergeUrl(target)) {
     await repoPromise // todo: ugh
     target = await repo.find(target).doc()
   }
