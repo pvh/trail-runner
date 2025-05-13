@@ -146,11 +146,12 @@ const resolveTarget = async (target) => {
 
 const targetToResponse = async (target) => {
   if (target.mimeType) {
-    return new Response(target.contents, {
+    return new Response(target.content, {
       headers: { "Content-Type": target.mimeType },
     })
   }
 
+  // legacy format here; can be retired in a future version
   if (target.contentType) {
     return new Response(target.contents, {
       headers: { "Content-Type": target.contentType },
