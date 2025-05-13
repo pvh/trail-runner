@@ -20,7 +20,6 @@ async function initializeRepo() {
     sharePolicy: async (peerId) => peerId.includes("storage-server"),
   })
 
-  self.AR = AR
   self.repo = repo
 
   return repo
