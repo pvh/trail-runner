@@ -7,6 +7,10 @@ import {
   MessageChannelNetworkAdapter
 } from "https://esm.sh/@automerge/vanillajs@2.0.0-beta.6/slim?bundle-deps"
 
+// Put the library on the global scope so it can be used in the console
+import * as AutomergeRepo from "https://esm.sh/@automerge/vanillajs@2.0.0-beta.6/slim?bundle-deps"
+self.AutomergeRepo = AutomergeRepo
+
 const CACHE_NAME = "v6"
 
 async function initializeRepo() {
@@ -141,6 +145,12 @@ const resolveTarget = async (target) => {
 }
 
 const targetToResponse = async (target) => {
+  if (target.mimeType) {
+    return new Response(target.contents, {
+      headers: { "Content-Type": target.mimeType },
+    })
+  }
+
   if (target.contentType) {
     return new Response(target.contents, {
       headers: { "Content-Type": target.contentType },
