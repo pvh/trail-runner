@@ -1,15 +1,19 @@
-import * as AR from "https://esm.sh/@automerge/automerge-repo@2.0.0-alpha.14/slim?bundle-deps"
-import { IndexedDBStorageAdapter } from "https://esm.sh/@automerge/automerge-repo-storage-indexeddb@2.0.0-alpha.14?bundle-deps"
-import { BrowserWebSocketClientAdapter } from "https://esm.sh/@automerge/automerge-repo-network-websocket@2.0.0-alpha.14?bundle-deps"
-import { MessageChannelNetworkAdapter } from "https://esm.sh/@automerge/automerge-repo-network-messagechannel@2.0.0-alpha.14?bundle-deps"
+import {
+  Repo,
+  initializeWasm,
+  isValidAutomergeUrl,
+  IndexedDBStorageAdapter,
+  BrowserWebSocketClientAdapter,
+  MessageChannelNetworkAdapter
+} from "https://esm.sh/@automerge/vanillajs@2.0.0-beta.6/slim?bundle-deps"
 
 const CACHE_NAME = "v6"
 
 async function initializeRepo() {
-  await AR.initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.8/dist/automerge.wasm"))
+  await initializeWasm(fetch("https://esm.sh/@automerge/automerge@2.2.9/dist/automerge.wasm"))
 
   console.log("Creating repo")
-  const repo = new AR.Repo({
+  const repo = new Repo({
     storage: new IndexedDBStorageAdapter(),
     network: [new BrowserWebSocketClientAdapter("wss://sync.automerge.org")],
     peerId: "service-worker-" + Math.round(Math.random() * 1000000),
@@ -78,7 +82,7 @@ const determinePath = (url) => {
     ? requestPath.slice(registrationScope.length)
     : requestPath
 
-  // Special case for expected web serer behavior
+  // Special case for expected web server behavior
   const candidatePath = relativePath.split("/")
   if (candidatePath[candidatePath.length - 1] === "") {
     candidatePath[candidatePath.length - 1] = "index.html"
@@ -129,7 +133,7 @@ const resolveTarget = async (target) => {
     target = await resolveDNSTXTRecord(target)
   }
 
-  if (AR.isValidAutomergeUrl(target)) {
+  if (isValidAutomergeUrl(target)) {
     await repoPromise // todo: ugh
     target = await repo.find(target).doc()
   }
@@ -138,38 +142,6 @@ const resolveTarget = async (target) => {
 }
 
 const targetToResponse = async (target) => {
-  if (target?.content?.type === "link") {
-    // we need to handle fetching this from behind the scenes to maintain the path
-    const response = await fetch(target.content.url)
-    // return a response that makes this feel like it came from the same origin but works for html, pngs, etc
-    return new Response(response.body, {
-      headers: { "Content-Type": response.headers.get("Content-Type") },
-    })
-  } else if (target?.content) {
-    // the mimetype isn't actually here so we need to guess it based on the type field
-    const mimeType =
-      target.mimeType ||
-      {
-        svg: "image/svg+xml",
-        html: "text/html",
-        json: "application/json",
-        js: "application/javascript",
-        css: "text/css",
-        md: "text/markdown",
-        txt: "text/plain",
-        "": "text/plain",
-        png: "image/png",
-        jpg: "image/jpeg",
-      }[target.type]
-
-    const content = target?.content?.value ? target.content.value : target.content
-
-    return new Response(content, {
-      headers: { "Content-Type": mimeType },
-    })
-  }
-
-  // This is defunct, we just use mimeType and content now but support for old files is good
   if (target.contentType) {
     return new Response(target.contents, {
       headers: { "Content-Type": target.contentType },
