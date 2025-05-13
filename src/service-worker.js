@@ -3,7 +3,7 @@ import {
   initializeWasm,
   isValidAutomergeUrl,
   IndexedDBStorageAdapter,
-  BrowserWebSocketClientAdapter,
+  WebSocketClientAdapter,
   MessageChannelNetworkAdapter
 } from "https://esm.sh/@automerge/vanillajs@2.0.0-beta.6/slim?bundle-deps"
 
