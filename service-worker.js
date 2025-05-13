@@ -146,7 +146,7 @@ const resolveTarget = async (target) => {
 
 const targetToResponse = async (target) => {
   if (target.mimeType) {
-    return new Response(target.contents, {
+    return new Response(target.content, {
       headers: { "Content-Type": target.mimeType },
     })
   }
