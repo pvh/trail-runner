@@ -29,7 +29,7 @@ The document IDs are ugly and un-memorable. How can we fix this? By using a tric
 
 This (as of this writing) this is a synonym for the example above:
 
-`https://am.pvh.ca/example/index.html`
+`https://am.pvh.ca/@pvh.ca/example/index.html`
 
 Anyone can set up their own _automerge TXT record. Just point to any arbitrary automerge document ID.
 
@@ -55,3 +55,11 @@ Last, `404.html` is served by our static site host in response to any invalid re
 ## Firefox
 
 This implementation uses import statements in the service worker which are not quite supported in Firefox yet. They have been supported in Chrome and Safari for a number of years now so we hope firefox catches up soon.
+
+## Building for GitHub Pages
+
+```
+git worktree add dist gh-pages
+cp -r src dist/
+```
+
